@@ -11,6 +11,17 @@ The goal is to offer self-contained Windows and macOS downloads through
 GitHub Releases. A future Avalonia app will use the same C# rendering
 library as the CLI.
 
+## Show the build version
+
+```powershell
+dotnet run --project src/Dmsh.Cli -- --version
+```
+
+The CLI shows the application version as `Major.Minor.Build`, the short Git
+commit hash, a `Modified` marker for uncommitted changes, and the UTC build time.
+Set Major and Minor in `Directory.Build.props`. Build comes from the Git commit
+count and falls back to 0 if Git cannot resolve the revision.
+
 ## Inspect the sheet layout
 
 From the repository root, pass a template and the map's pixel dimensions:
@@ -24,6 +35,10 @@ map placement in PDF points. The overview, when enabled, precedes the sheets.
 This command does not read the image or export a PDF.
 
 ## Export PDFs
+
+PDF export uses PDFsharp. The shared library explicitly references
+`System.Security.Cryptography.Pkcs` 8.0.2 to replace the vulnerable 8.0.1
+dependency brought in by PDFsharp 6.2.4.
 
 ```powershell
 dotnet run --project src/Dmsh.Cli -- render map.png --template ../wmsh_ts/src/default.json

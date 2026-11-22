@@ -18,7 +18,9 @@ public sealed record ApplicationVersion(
     {
         var attributes = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .ToDictionary(attribute => attribute.Key, attribute => attribute.Value ?? "");
-        var assemblyVersion = assembly.GetName().Version ?? new Version(1, 0, 0);
+        var number = Version.TryParse(attributes.GetValueOrDefault("ApplicationVersion"), out var version)
+            ? version
+            : new Version(assembly.GetName().Version?.Major ?? 0, assembly.GetName().Version?.Minor ?? 0, 0);
         var timestamp = DateTimeOffset.TryParse(
             attributes.GetValueOrDefault("BuildTimestampUtc"),
             System.Globalization.CultureInfo.InvariantCulture,
@@ -28,7 +30,7 @@ public sealed record ApplicationVersion(
             : (DateTimeOffset?)null;
 
         return new ApplicationVersion(
-            assemblyVersion,
+            number,
             attributes.GetValueOrDefault("GitCommitHash", "unknown"),
             attributes.GetValueOrDefault("BuildState", "Unknown"),
             timestamp);

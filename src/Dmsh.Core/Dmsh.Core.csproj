@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="PDFsharp" Version="6.2.4" />
+    <!-- Override PDFsharp's vulnerable PKCS dependency. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.0" />
   </ItemGroup>
 </Project>
