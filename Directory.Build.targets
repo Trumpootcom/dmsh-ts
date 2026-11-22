@@ -1,0 +1,42 @@
+<Project>
+  <Target Name="GenerateGitVersionMetadata" BeforeTargets="GenerateAssemblyInfo">
+    <Exec Command="git rev-list --count HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitCommitCountOutput" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitCommitHashOutput" />
+    </Exec>
+    <Exec Command="git status --porcelain" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitStatusOutput" />
+    </Exec>
+
+    <PropertyGroup>
+      <_GitCommitCount>@(_GitCommitCountOutput)</_GitCommitCount>
+      <_GitCommitHash>@(_GitCommitHashOutput)</_GitCommitHash>
+      <_GitModified Condition="'@(_GitStatusOutput)' != ''">Modified</_GitModified>
+      <_GitCommitCount Condition="'$(_GitCommitCount)' == ''">0</_GitCommitCount>
+      <_GitCommitHash Condition="'$(_GitCommitHash)' == ''">unknown</_GitCommitHash>
+      <_GitModified Condition="'$(_GitCommitHash)' == 'unknown'">Unknown</_GitModified>
+      <_BuildTimestampUtc>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</_BuildTimestampUtc>
+      <Version>$(VersionPrefix).$(_GitCommitCount)</Version>
+      <AssemblyVersion>$(Version)</AssemblyVersion>
+      <FileVersion>$(Version)</FileVersion>
+      <InformationalVersion>$(Version) ($(_GitCommitHash), $(_GitModified))</InformationalVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildTimestampUtc</_Parameter1>
+        <_Parameter2>$(_BuildTimestampUtc)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitCommitHash</_Parameter1>
+        <_Parameter2>$(_GitCommitHash)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildState</_Parameter1>
+        <_Parameter2>$(_GitModified)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+</Project>
