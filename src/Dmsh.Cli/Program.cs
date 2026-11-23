@@ -1,6 +1,5 @@
 using Dmsh.Core;
 using System.Globalization;
-using System.Text.Json;
 
 if (args is ["--version"] or ["-v"])
 {
@@ -26,59 +25,30 @@ if (args is ["help", _] or [_, "--help"] or [_, "-h"])
     return;
 }
 
-if (args is ["plan", var path, var width, var height]
-    && int.TryParse(width, out var imageWidth) && int.TryParse(height, out var imageHeight))
-{
-    try
-    {
-        using var json = File.OpenRead(path);
-        var plan = SheetPlan.Create(MapTemplate.Read(json), imageWidth, imageHeight);
-        Console.WriteLine(JsonSerializer.Serialize(plan, new JsonSerializerOptions(JsonSerializerOptions.Web)
-        {
-            WriteIndented = true
-        }));
-        return;
-    }
-    catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
-    {
-        Console.Error.WriteLine(error.Message);
-        Environment.ExitCode = 1;
-        return;
-    }
-}
-
 try
 {
-    if (args[0] != "plan")
+    var batch = args[0] == "batch";
+    var options = ReadExportOptions(args, batch);
+    double? worldWidth = null;
+    if (options.TryGetValue("--width", out var widthValue))
     {
-        var batch = args[0] == "batch";
-        var options = ReadExportOptions(args, batch);
-        double? worldWidth = null;
-        if (options.TryGetValue("--width", out var widthValue))
-        {
-            if (!double.TryParse(widthValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var feet)
-                || !double.IsFinite(feet) || feet <= 0)
-                throw new ArgumentException("--width must be a positive, finite number in feet.");
-            worldWidth = feet;
-        }
-
-        var templatePath = options.GetValueOrDefault("--template");
-        Console.WriteLine(ApplicationVersion.Current.DisplayName);
-        Environment.ExitCode = batch
-            ? RenderCommands.Batch(options["--incoming"], options["--output"], templatePath, worldWidth)
-            : RenderCommands.Render(args[^1], templatePath, worldWidth);
-        return;
+        if (!double.TryParse(widthValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var feet)
+            || !double.IsFinite(feet) || feet <= 0)
+            throw new ArgumentException("--width must be a positive, finite number in feet.");
+        worldWidth = feet;
     }
+
+    var templatePath = options.GetValueOrDefault("--template");
+    Console.WriteLine(ApplicationVersion.Current.DisplayName);
+    Environment.ExitCode = batch
+        ? RenderCommands.Batch(options["--incoming"], options["--output"], templatePath, worldWidth)
+        : RenderCommands.Render(args[^1], templatePath, worldWidth);
 }
 catch (Exception error)
 {
     Console.Error.WriteLine(error.Message);
     Environment.ExitCode = 1;
-    return;
 }
-
-Console.Error.WriteLine("Invalid command or arguments. Run with --help to list commands.");
-Environment.ExitCode = 2;
 
 static Dictionary<string, string> ReadExportOptions(string[] arguments, bool batch)
 {

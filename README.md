@@ -37,18 +37,6 @@ affect the marker.
 Set Major and Minor in `Directory.Build.props`. Build comes from the Git commit
 count and falls back to 0 if Git cannot resolve the revision.
 
-## Inspect the sheet layout
-
-From the repository root, pass a template and the map's pixel dimensions:
-
-```sh
-dotnet run --project src/Dmsh.Cli -- plan ../wmsh_ts/src/default.json 3200 2000
-```
-
-The command prints the planned page count, sheet windows in row order, and
-map placement in PDF points. The overview, when enabled, precedes the sheets.
-This command does not read the image or export a PDF.
-
 ## Export PDFs
 
 Both export commands print the program version and Git revision, then
@@ -141,7 +129,8 @@ and aliases. The cell-based patterns start at grid intersections so their
 phase continues across overlapping sheets. The overview uses the same patterns.
 Hex dash lengths are based on each edge's length.
 
-The overview is always landscape. It uses the TypeScript layout formulas
+The overview is always landscape and uses the source image filename
+without its extension as the displayed map title. It uses the TypeScript layout formulas
 for the map area and the left title, legend, and scaling panel. Panel font
 sizes scale with the printable page height. Panel text, sheet badges, and
 coordinate labels use selectable PDF Helvetica and Helvetica Bold with the

@@ -1,6 +1,5 @@
 internal static class CommandHelp
 {
-    private const string Plan = "plan <template.json> <image-width-px> <image-height-px>";
     private const string Render = "[--template <template.json>] [--width <feet>] <image>";
     private const string Batch = "batch --incoming <directory> --output <directory> [--template <template.json>] [--width <feet>]";
 
@@ -16,8 +15,6 @@ internal static class CommandHelp
               {Render}
                   Export one JPEG, PNG, BMP or static WebP to a PDF beside it.
                   Example: Dmsh.Cli map.png
-              {Plan}
-                  Print the planned page layout as JSON.
               {Batch}
                   Export images from one folder and archive successful inputs.
 
@@ -37,14 +34,6 @@ internal static class CommandHelp
     {
         var help = command switch
         {
-            "plan" => $"""
-                Usage: Dmsh.Cli {Plan}
-
-                Read a schema version 1 template and print the planned layout as JSON.
-                Supply the image dimensions in pixels. No image or PDF is opened.
-
-                Example: Dmsh.Cli plan T000.json 2400 1600
-                """,
             "batch" => $"""
                 Usage: Dmsh.Cli {Batch}
 

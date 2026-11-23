@@ -56,7 +56,8 @@ public static class MapPdfExporter
                 SheetArtwork.DrawBadge(graphics, text, sheet,
                     new XRect(left + sheet.Left * scale, top + sheet.Top * scale,
                         plan.PrintableWidth * scale, plan.PrintableHeight * scale), Math.Min(1, scale));
-            OverviewPanel.Draw(graphics, text, template, plan, pageHeight, panelWidth, tableScale);
+            OverviewPanel.Draw(graphics, text, template, plan, pageHeight, panelWidth, tableScale,
+                Path.GetFileNameWithoutExtension(imagePath));
             graphics.Dispose();
             text.Finish();
         }
