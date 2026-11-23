@@ -80,20 +80,29 @@ and their reserved space. The default template enables them. The optional
 overview shows the rectangular grid, sheet outlines and their badges, with one set of coordinate
 bars around the full map when coordinates are enabled.
 
+The overview is always landscape. It uses the TypeScript layout formulas
+for the map area and the left title, legend, and scaling panel. Panel font
+sizes scale with the printable page height. Panel text, sheet badges, and
+coordinate labels use selectable PDF Helvetica and Helvetica Bold with the
+same measurement tables as the TypeScript exporter. PDF viewers may
+substitute their own Helvetica glyphs.
+
 On the overview and map sheets, the exporter draws the grid first, then
 any coordinate bars, then the page badges so they stay on top.
 
-Coordinate bars use bold row and column labels and thinner distance numbers.
-The distance numbers use the same font size and width scaling regardless of
-how many digits they contain.
+Coordinate bar labels use the TypeScript sizing and placement formulas. The
+bar is half a grid cell tall or wide. Row and column labels use 95% of that
+thickness and 60% horizontal scaling. Distance numbers use 85% of the
+thickness and 50% horizontal scaling regardless of digit count. Both use
+Helvetica Bold, with lighter ink for distance numbers. Horizontal text uses
+the original TypeScript baseline calculation.
 
 Sheet badges use 18-point bold text with the TypeScript badge's baseline,
-padding, and corner placement. Badge text uses Helvetica on macOS and Arial
-on Windows.
+padding, and corner placement.
 
 Regenerate PDFs made by older builds if Acrobat reports a page error. The
-exporter now leaves PDF page commands uncompressed and embeds images and
-labels as JPEGs to avoid the incomplete compressed streams seen in those
+exporter leaves PDF page commands uncompressed and embeds the map as a JPEG
+to avoid the incomplete compressed streams seen in those
 exports.
 
 ### Image preprocessing

@@ -19,10 +19,19 @@ public static class MapPdfExporter
 
         if (plan.HasOverview)
         {
-            using var graphics = AddPage(document, plan);
-            var scale = Math.Min(plan.PrintableWidth / plan.CanvasWidth, plan.PrintableHeight / plan.CanvasHeight);
-            var left = (plan.PageWidth - plan.CanvasWidth * scale) / 2;
-            var top = (plan.PageHeight - plan.CanvasHeight * scale) / 2;
+            var pageWidth = Math.Max(plan.PageWidth, plan.PageHeight);
+            var pageHeight = Math.Min(plan.PageWidth, plan.PageHeight);
+            var page = AddPage(document, pageWidth, pageHeight);
+            using var graphics = XGraphics.FromPdfPage(page);
+            var text = new PdfLabelText(page);
+            var tableScale = (pageHeight - 2 * plan.Margin) / 756;
+            var panelWidth = 144 * tableScale;
+            var overviewWidth = pageWidth - 3 * plan.Margin - panelWidth;
+            if (overviewWidth <= 0)
+                throw new ArgumentException("The page margins leave no room for the overview map.");
+            var scale = overviewWidth / plan.CanvasWidth;
+            var left = 2 * plan.Margin + panelWidth;
+            var top = (pageHeight - plan.CanvasHeight * scale) / 2;
             graphics.DrawImage(image, left + plan.MapLeft * scale, top + plan.MapTop * scale,
                 plan.MapWidth * scale, plan.MapHeight * scale);
 
@@ -36,20 +45,25 @@ public static class MapPdfExporter
             SheetArtwork.DrawOverviewGrid(graphics, template.Grid, plan);
             graphics.Restore(gridState);
 
-            var outline = new XPen(XColors.Gray, 1 / scale);
-            foreach (var sheet in plan.Sheets)
-                graphics.DrawRectangle(outline, sheet.Left, sheet.Top, plan.PrintableWidth, plan.PrintableHeight);
-            if (plan.HasCoordinateBorder)
-                SheetArtwork.DrawOverviewCoordinates(graphics, template.Grid, plan);
-            foreach (var sheet in plan.Sheets)
-                SheetArtwork.DrawBadge(graphics, sheet,
-                    new XRect(sheet.Left, sheet.Top, plan.PrintableWidth, plan.PrintableHeight));
+            var outline = new XPen(OverviewPanel.Ink, 0.5 / scale);
+            graphics.DrawRectangle(outline, 0, 0, plan.CanvasWidth, plan.CanvasHeight);
             graphics.Restore(overviewState);
+            if (plan.HasCoordinateBorder)
+                SheetArtwork.DrawOverviewCoordinates(graphics, text, template.Grid, plan, left, top, scale);
+            foreach (var sheet in plan.Sheets)
+                SheetArtwork.DrawBadge(graphics, text, sheet,
+                    new XRect(left + sheet.Left * scale, top + sheet.Top * scale,
+                        plan.PrintableWidth * scale, plan.PrintableHeight * scale), Math.Min(1, scale));
+            OverviewPanel.Draw(graphics, text, template, plan, pageHeight, panelWidth, tableScale);
+            graphics.Dispose();
+            text.Finish();
         }
 
         foreach (var sheet in plan.Sheets)
         {
-            using var graphics = AddPage(document, plan);
+            var page = AddPage(document, plan.PageWidth, plan.PageHeight);
+            using var graphics = XGraphics.FromPdfPage(page);
+            var text = new PdfLabelText(page);
             var clip = new XGraphicsPath();
             var state = graphics.Save();
             clip.AddRectangle(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight);
@@ -59,19 +73,21 @@ public static class MapPdfExporter
             SheetArtwork.DrawGrid(graphics, template.Grid, plan, sheet);
             graphics.Restore(state);
             if (plan.HasCoordinateBorder)
-                SheetArtwork.DrawCoordinates(graphics, template.Grid, plan, sheet);
-            SheetArtwork.DrawBadge(graphics, sheet,
+                SheetArtwork.DrawCoordinates(graphics, text, template.Grid, plan, sheet);
+            SheetArtwork.DrawBadge(graphics, text, sheet,
                 new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
+            graphics.Dispose();
+            text.Finish();
         }
 
         document.Save(destination, false);
     }
 
-    private static XGraphics AddPage(PdfDocument document, SheetPlan plan)
+    private static PdfPage AddPage(PdfDocument document, double width, double height)
     {
         var page = document.AddPage();
-        page.Width = XUnit.FromPoint(plan.PageWidth);
-        page.Height = XUnit.FromPoint(plan.PageHeight);
-        return XGraphics.FromPdfPage(page);
+        page.Width = XUnit.FromPoint(width);
+        page.Height = XUnit.FromPoint(height);
+        return page;
     }
 }
