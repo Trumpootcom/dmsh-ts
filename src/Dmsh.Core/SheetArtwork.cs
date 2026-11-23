@@ -10,6 +10,14 @@ internal static class SheetArtwork
     private static readonly XPen BorderPen = new(XColor.FromArgb(89, 74, 46), 0.5);
 
     public static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, SheetWindow sheet)
+        => DrawGrid(graphics, grid, plan, sheet.Left, sheet.Top,
+            new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
+
+    public static void DrawOverviewGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan)
+        => DrawGrid(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight));
+
+    private static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan,
+        double sheetLeft, double sheetTop, XRect bounds)
     {
         if (grid.Style is not ("rect" or "square") || grid.Iso || grid.RotationDegrees != 0
             || grid.LineStyle != "solid" || grid.Opacity <= 0 || grid.Color is "diff" or "contrast")
@@ -19,21 +27,21 @@ internal static class SheetArtwork
         var pen = new XPen(XColor.FromArgb((int)Math.Round(Math.Clamp(grid.Opacity, 0, 1) * 255),
             color, color, color), grid.LineWidthPoints);
         var spacing = plan.GridSpacing;
-        var x = FirstLine(plan.CanvasWidth / 2 + grid.OffsetX % 1 * spacing, sheet.Left, spacing);
-        var y = FirstLine(plan.CanvasHeight / 2 + grid.OffsetY % 1 * spacing, sheet.Top, spacing);
-        for (; x <= sheet.Left + plan.PrintableWidth; x += spacing)
+        var x = FirstLine(plan.CanvasWidth / 2 + grid.OffsetX % 1 * spacing, sheetLeft, spacing);
+        var y = FirstLine(plan.CanvasHeight / 2 + grid.OffsetY % 1 * spacing, sheetTop, spacing);
+        for (; x <= sheetLeft + bounds.Width; x += spacing)
         {
-            var pageX = plan.Margin + x - sheet.Left;
-            graphics.DrawLine(pen, pageX, plan.Margin, pageX, plan.Margin + plan.PrintableHeight);
+            var pageX = bounds.Left + x - sheetLeft;
+            graphics.DrawLine(pen, pageX, bounds.Top, pageX, bounds.Bottom);
         }
-        for (; y <= sheet.Top + plan.PrintableHeight; y += spacing)
+        for (; y <= sheetTop + bounds.Height; y += spacing)
         {
-            var pageY = plan.Margin + y - sheet.Top;
-            graphics.DrawLine(pen, plan.Margin, pageY, plan.Margin + plan.PrintableWidth, pageY);
+            var pageY = bounds.Top + y - sheetTop;
+            graphics.DrawLine(pen, bounds.Left, pageY, bounds.Right, pageY);
         }
     }
 
-    public static void DrawBadge(XGraphics graphics, SheetPlan plan, SheetWindow sheet)
+    public static void DrawBadge(XGraphics graphics, SheetWindow sheet, XRect bounds)
     {
         var label = ColumnName(sheet.Column) + (sheet.Row + 1);
         const double fontSize = 18;
@@ -46,8 +54,8 @@ internal static class SheetArtwork
         using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
         var textWidth = font.MeasureText(label, out _, paint) / rasterScale;
         var width = Math.Max(36, textWidth + 20);
-        var x = sheet.Column == 0 ? plan.Margin + 1 : plan.PageWidth - plan.Margin - width - 1;
-        var y = sheet.Row == 0 ? plan.Margin + 1 : plan.PageHeight - plan.Margin - height - 1;
+        var x = sheet.Column == 0 ? bounds.Left + 1 : bounds.Right - width - 1;
+        var y = sheet.Row == 0 ? bounds.Top + 1 : bounds.Bottom - height - 1;
         graphics.DrawRoundedRectangle(new XPen(XColors.Black, 1.625), XBrushes.White,
             new XRect(x, y, width, height), new XSize(12, 12));
         // Keep the opaque text image inside the rounded badge and position
@@ -68,21 +76,27 @@ internal static class SheetArtwork
     }
 
     public static void DrawCoordinates(XGraphics graphics, GridTemplate grid, SheetPlan plan, SheetWindow sheet)
+        => DrawCoordinates(graphics, grid, plan, sheet.Left, sheet.Top,
+            new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
+
+    public static void DrawOverviewCoordinates(XGraphics graphics, GridTemplate grid, SheetPlan plan)
+        => DrawCoordinates(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight));
+
+    private static void DrawCoordinates(XGraphics graphics, GridTemplate grid, SheetPlan plan,
+        double sheetLeft, double sheetTop, XRect bounds)
     {
         var spacing = plan.GridSpacing;
         var bar = spacing / 2;
-        var left = plan.Margin + plan.MapLeft - sheet.Left;
-        var top = plan.Margin + plan.MapTop - sheet.Top;
+        var left = bounds.Left + plan.MapLeft - sheetLeft;
+        var top = bounds.Top + plan.MapTop - sheetTop;
         var right = left + plan.MapWidth;
         var bottom = top + plan.MapHeight;
-        var maxX = plan.PageWidth - plan.Margin;
-        var maxY = plan.PageHeight - plan.Margin;
 
         var column = 0;
         for (var x = FirstLine(left + plan.MapWidth / 2 + grid.OffsetX % 1 * spacing, left, spacing);
              x + spacing <= right + 1e-9; x += spacing, column++)
         {
-            if (!Inside(x + bar, plan.Margin, maxX))
+            if (!Inside(x + bar, bounds.Left, bounds.Right))
                 continue;
             DrawCell(graphics, ColumnName(column), column, x, top - bar, spacing, bar);
             DrawCell(graphics, ColumnName(column), column, x, bottom, spacing, bar);
@@ -92,11 +106,11 @@ internal static class SheetArtwork
         for (var y = FirstLine(top + plan.MapHeight / 2 + grid.OffsetY % 1 * spacing, top, spacing);
              y + spacing <= bottom + 1e-9; y += spacing, row++)
         {
-            if (!Inside(y + bar, plan.Margin, maxY))
+            if (!Inside(y + bar, bounds.Top, bounds.Bottom))
                 continue;
-            if (Inside(left, plan.Margin, maxX))
+            if (Inside(left, bounds.Left, bounds.Right))
                 DrawCell(graphics, (row + 1).ToString(), row, left - bar, y, bar, spacing, vertical: true);
-            if (Inside(right, plan.Margin, maxX))
+            if (Inside(right, bounds.Left, bounds.Right))
                 DrawCell(graphics, (row + 1).ToString(), row, right, y, bar, spacing, vertical: true);
         }
     }

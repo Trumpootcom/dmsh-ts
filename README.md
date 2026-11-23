@@ -77,8 +77,11 @@ The exporter draws the clipped map, the default solid rectangular grid,
 and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
 `"coordinates": false` in the template JSON to omit the coordinate bars
 and their reserved space. The default template enables them. The optional
-overview shows sheet outlines and their badges, with one set of coordinate
+overview shows the rectangular grid, sheet outlines and their badges, with one set of coordinate
 bars around the full map when coordinates are enabled.
+
+On the overview and map sheets, the exporter draws the grid first, then
+any coordinate bars, then the page badges so they stay on top.
 
 Coordinate bars use bold row and column labels and thinner distance numbers.
 The distance numbers use the same font size and width scaling regardless of

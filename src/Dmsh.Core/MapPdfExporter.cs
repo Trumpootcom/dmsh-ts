@@ -25,9 +25,26 @@ public static class MapPdfExporter
             var top = (plan.PageHeight - plan.CanvasHeight * scale) / 2;
             graphics.DrawImage(image, left + plan.MapLeft * scale, top + plan.MapTop * scale,
                 plan.MapWidth * scale, plan.MapHeight * scale);
+
+            var overviewState = graphics.Save();
+            graphics.TranslateTransform(left, top);
+            graphics.ScaleTransform(scale, scale);
+            var gridState = graphics.Save();
+            var canvasClip = new XGraphicsPath();
+            canvasClip.AddRectangle(0, 0, plan.CanvasWidth, plan.CanvasHeight);
+            graphics.IntersectClip(canvasClip);
+            SheetArtwork.DrawOverviewGrid(graphics, template.Grid, plan);
+            graphics.Restore(gridState);
+
+            var outline = new XPen(XColors.Gray, 1 / scale);
             foreach (var sheet in plan.Sheets)
-                graphics.DrawRectangle(XPens.Gray, left + sheet.Left * scale, top + sheet.Top * scale,
-                    plan.PrintableWidth * scale, plan.PrintableHeight * scale);
+                graphics.DrawRectangle(outline, sheet.Left, sheet.Top, plan.PrintableWidth, plan.PrintableHeight);
+            if (plan.HasCoordinateBorder)
+                SheetArtwork.DrawOverviewCoordinates(graphics, template.Grid, plan);
+            foreach (var sheet in plan.Sheets)
+                SheetArtwork.DrawBadge(graphics, sheet,
+                    new XRect(sheet.Left, sheet.Top, plan.PrintableWidth, plan.PrintableHeight));
+            graphics.Restore(overviewState);
         }
 
         foreach (var sheet in plan.Sheets)
@@ -41,9 +58,10 @@ public static class MapPdfExporter
                 plan.Margin + plan.MapTop - sheet.Top, plan.MapWidth, plan.MapHeight);
             SheetArtwork.DrawGrid(graphics, template.Grid, plan, sheet);
             graphics.Restore(state);
-            SheetArtwork.DrawBadge(graphics, plan, sheet);
             if (plan.HasCoordinateBorder)
                 SheetArtwork.DrawCoordinates(graphics, template.Grid, plan, sheet);
+            SheetArtwork.DrawBadge(graphics, sheet,
+                new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
         }
 
         document.Save(destination, false);
