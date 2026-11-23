@@ -121,11 +121,18 @@ dotnet run --project src/Dmsh.Cli -- --width 120 "ASHEN-E1-MAP02D_DM 150x110.png
 
 Passing one image as the final argument writes `map.pdf` beside `map.png`.
 `batch` scans the top level of `incoming/` for JPEG, PNG, BMP and WebP
-files. Create `incoming/` and put your images there before running it.
+files. Put your images in `incoming/` before running it.
 The CLI creates the sibling folders `output/` and `processed/` as needed.
 It saves each PDF in `output/` before moving its source to `processed/`.
 Use `--incoming` or `--output` to change those paths. The processed folder
 always sits beside the selected incoming folder.
+
+Use the included `map.png` to try a single export, or run batch mode on
+the sample images already in `incoming/`. The checkout also includes
+`processed/` and `output/`, each with a `.gitkeep` placeholder.
+Batch moves the tracked samples, so Git shows their removal from
+`incoming/` after a successful run. PDFs and archived copies appear as
+untracked files until staged.
 
 On Windows, run `PROCESS_INCOMING.bat` from the repo or a published
 Windows build. It runs batch mode using the folder that contains the script.
