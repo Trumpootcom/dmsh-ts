@@ -39,6 +39,7 @@ count and falls back to 0 if Git cannot resolve the revision.
 
 ## Export PDFs
 
+The CLI ships templates `T000.json` through `T003.json`.
 Run `Dmsh.Cli --templates` to list the templates in the executable's
 `Templates` folder. The bundled `T000.json` appears even when that folder
 is missing. Add JSON files to that folder to make them available by
@@ -77,7 +78,7 @@ dependency brought in by PDFsharp 6.2.4.
 
 ```powershell
 dotnet run --project src/Dmsh.Cli -- map.png
-dotnet run --project src/Dmsh.Cli -- batch --incoming incoming --output output
+dotnet run --project src/Dmsh.Cli -- batch
 ```
 
 Use `--template <name-or-path>` to replace the bundled default.
@@ -111,13 +112,31 @@ bars align with the map edges on the overview and print sheets. Explicit
 dotnet run --project src/Dmsh.Cli -- --width 120 map.png
 ```
 
+If the filename ends in dimensions, its width wins. This example uses
+**150 feet** from `150x110` even though `--width 120` is present:
+
+```powershell
+dotnet run --project src/Dmsh.Cli -- --width 120 "ASHEN-E1-MAP02D_DM 150x110.png"
+```
+
 Passing one image as the final argument writes `map.pdf` beside `map.png`.
-`batch` scans the top level of
-`incoming` for JPEG, PNG, BMP and WebP files and moves each source into
-`incoming/processed` after its PDF is saved in `output`. Both commands
+`batch` scans the top level of `incoming/` for JPEG, PNG, BMP and WebP
+files. Create `incoming/` and put your images there before running it.
+The CLI creates the sibling folders `output/` and `processed/` as needed.
+It saves each PDF in `output/` before moving its source to `processed/`.
+Use `--incoming` or `--output` to change those paths. The processed folder
+always sits beside the selected incoming folder.
+
+On Windows, run `PROCESS_INCOMING.bat` from the repo or a published
+Windows build. It runs batch mode using the folder that contains the script.
+
+Both export modes
 replace existing PDFs by default after the new PDF has been written
 successfully. Existing archive paths and duplicate output names within a
 batch are reported as conflicts.
+
+In batch mode, each filename in `incoming/` can specify its own map width
+with a suffix like `150x110`.
 
 On Windows, close the existing PDF in Acrobat or another viewer before
 rerunning the command if the viewer blocks replacement. If replacement
@@ -149,8 +168,8 @@ phase continues across overlapping sheets. The overview uses the same patterns.
 Hex dash lengths are based on each edge's length.
 
 The overview is always landscape and uses the source image filename
-without its extension as the displayed map title. It uses the TypeScript layout formulas
-for the map area and the left title, legend, and scaling panel. Panel font
+without its extension as the displayed map title. It uses the TypeScript
+layout formulas for the map area and the left title, legend, and scaling panel. Panel font
 sizes scale with the printable page height. Panel text, sheet badges, and
 coordinate labels use selectable PDF Helvetica and Helvetica Bold with the
 same measurement tables as the TypeScript exporter. PDF viewers may
@@ -196,4 +215,7 @@ exporter. Source image contents stay intact.
 
 The JPEG quality setting is independent of the final PDF file size. SkiaSharp
 handles decoding and encoding, so JPEG bytes can differ from TypeScript and
-the TypeScript decoder's 80 MB memory ceiling does not apply.
+the CLI has no fixed decoder memory cap. The 12-megapixel input limit
+bounds the decoded pixel buffer size, while total memory use also includes
+the working image, decoder buffers, and PDF generation.
+The image limit and large-image batch behavior have been checked locally.

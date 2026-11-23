@@ -16,9 +16,13 @@ internal static class RenderCommands
     public static int Batch(string incoming, string output, string? templatePath, double? worldWidth)
     {
         var template = ReadTemplate(templatePath, worldWidth);
-        incoming = Path.GetFullPath(incoming);
+        incoming = Path.TrimEndingDirectorySeparator(Path.GetFullPath(incoming));
         output = Path.GetFullPath(output);
-        var processed = Path.Combine(incoming, "processed");
+        var parent = Path.GetDirectoryName(incoming)
+            ?? throw new ArgumentException("The incoming directory must have a parent for the processed folder.");
+        var processed = Path.Combine(parent, "processed");
+        if (string.Equals(incoming, processed, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("The incoming directory cannot also be the processed directory.");
         var projectRoot = FindProjectRoot();
         var groups = Directory.GetFiles(incoming).Where(IsImage)
             .GroupBy(path => Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)

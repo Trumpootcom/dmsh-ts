@@ -47,7 +47,8 @@ try
     var templatePath = options.GetValueOrDefault("--template");
     Console.WriteLine(ApplicationVersion.Current.DisplayName);
     Environment.ExitCode = batch
-        ? RenderCommands.Batch(options["--incoming"], options["--output"], templatePath, worldWidth)
+        ? RenderCommands.Batch(options.GetValueOrDefault("--incoming", "incoming"),
+            options.GetValueOrDefault("--output", "output"), templatePath, worldWidth)
         : RenderCommands.Render(args[^1], templatePath, worldWidth);
 }
 catch (Exception error)
@@ -74,7 +75,5 @@ static Dictionary<string, string> ReadExportOptions(string[] arguments, bool bat
             throw new ArgumentException($"Specify {option} only once.");
     }
 
-    if (batch && (!options.ContainsKey("--incoming") || !options.ContainsKey("--output")))
-        throw new ArgumentException("Batch requires --incoming and --output. Run batch --help for usage.");
     return options;
 }

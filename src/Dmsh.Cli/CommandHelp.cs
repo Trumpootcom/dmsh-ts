@@ -1,7 +1,7 @@
 internal static class CommandHelp
 {
     private const string Render = "[--template <name-or-path>] [--width <feet>] <image>";
-    private const string Batch = "batch --incoming <directory> --output <directory> [--template <name-or-path>] [--width <feet>]";
+    private const string Batch = "batch [--incoming <directory>] [--output <directory>] [--template <name-or-path>] [--width <feet>]";
 
     public static void WriteOverview(TextWriter output)
     {
@@ -40,15 +40,16 @@ internal static class CommandHelp
                 Usage: Dmsh.Cli {Batch}
 
                 Process supported images in the top level of the incoming directory.
-                Save each PDF in the output directory, then move the source into
-                the incoming directory's processed subfolder. Reports per-image
+                Defaults to incoming and output in the current directory.
+                Save each PDF in output, then move the source to the processed
+                folder beside incoming. Reports per-image
                 failures and continues. Returns exit code 1 if any image failed.
 
                 Uses the built-in T000.json unless you supply --template.
                 The .json extension is optional.
                 Use --width <feet> to override worldWidthFeet. A trailing WxH
                 or WXH in a filename takes precedence for that image.
-                Example: Dmsh.Cli batch --incoming incoming --output output
+                Example: Dmsh.Cli batch
                 """,
             _ => null
         };
