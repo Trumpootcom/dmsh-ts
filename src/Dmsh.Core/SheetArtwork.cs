@@ -11,24 +11,48 @@ internal static class SheetArtwork
     private static readonly XColor CoordinateInk = XColor.FromArgb(46, 36, 20);
     private static readonly XColor DistanceInk = XColor.FromArgb(97, 79, 51);
 
-    public static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, SheetWindow sheet)
+    public static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, SheetWindow sheet,
+        IReadOnlyList<HexGrid.Edge>? hexEdges)
         => DrawGrid(graphics, grid, plan, sheet.Left, sheet.Top,
-            new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
+            new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight), 1, hexEdges);
 
-    public static void DrawOverviewGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, double scale)
-        => DrawGrid(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight), scale);
+    public static void DrawOverviewGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, double scale,
+        IReadOnlyList<HexGrid.Edge>? hexEdges)
+        => DrawGrid(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight), scale, hexEdges);
 
     private static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan,
-        double sheetLeft, double sheetTop, XRect bounds, double viewScale = 1)
+        double sheetLeft, double sheetTop, XRect bounds, double viewScale, IReadOnlyList<HexGrid.Edge>? hexEdges)
     {
         var style = GridLinePattern.Normalize(grid.LineStyle);
-        if (grid.Style is not ("rect" or "square" or "iso")
+        if (grid.Style is not ("rect" or "square" or "iso" or "hex")
             || style == "none" || grid.Opacity <= 0 || grid.Color is "diff" or "contrast")
             return;
 
         var color = grid.Color switch { "white" => 255, "gray" => 128, _ => 0 };
         var pen = new XPen(XColor.FromArgb((int)Math.Round(Math.Clamp(grid.Opacity, 0, 1) * 255),
             color, color, color), grid.LineWidthPoints);
+        if (grid.Style == "hex")
+        {
+            var padding = pen.Width / 2;
+            if (hexEdges is null)
+                return;
+            foreach (var edge in hexEdges)
+            {
+                var start = ToPage(edge.Start.X, edge.Start.Y);
+                var end = ToPage(edge.End.X, edge.End.Y);
+                if (Math.Max(start.X, end.X) < bounds.Left - padding ||
+                    Math.Min(start.X, end.X) > bounds.Right + padding ||
+                    Math.Max(start.Y, end.Y) < bounds.Top - padding ||
+                    Math.Min(start.Y, end.Y) > bounds.Bottom + padding)
+                    continue;
+
+                var dx = end.X - start.X;
+                var dy = end.Y - start.Y;
+                GridLinePattern.Apply(pen, style, Math.Sqrt(dx * dx + dy * dy), 0, viewScale);
+                graphics.DrawLine(pen, start, end);
+            }
+            return;
+        }
         // Retain the TypeScript lattice's positive-up PDF coordinates. Convert
         // to PDFsharp's positive-down coordinates only when drawing.
         var angle = (grid.Iso ? grid.IsoAngleDegrees!.Value : 90) * Math.PI / 180;

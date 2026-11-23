@@ -3,13 +3,18 @@
 - [x] Port the default rectangular grid, sheet badges, and optional coordinate labels on map sheets.
 - [x] Port the default TypeScript overview layout, including its legend, grid, coordinate bars, and sheet badges.
 - [x] Compare the default exports for page count, paper size and orientation, sheet order, map placement, overlap, and text positions, sizes, and weights.
-- [ ] Visually compare grid spacing, stroke appearance, and labels across sheet seams and on the overview.
+- [x] Visually compare grid spacing, stroke appearance, and labels across sheet seams and on the overview.
 - [x] Port rectangular grid dash patterns from `grid.ts`, including `dash-1` through `dash-16` where defined, `corners`, and legacy patterns and aliases.
-- [ ] Compare dashed exports against TypeScript on individual sheets and the overview, including dash phase across overlaps.
+- [x] Visually check dashed grid rendering in the C# export.
+- [ ] Compare dash phase against TypeScript across sheet overlaps and on the overview.
 - [x] Port rotated rectangular and isometric grids using the TypeScript lattice math.
 - [ ] Compare rotated and isometric exports with TypeScript, including offsets and dash phase across sheet overlaps.
-- [ ] Port hex grids, difference blend, and adaptive contrast. Compare their output with the TypeScript reference.
+- [x] Port hex grid geometry, rotation, offsets, and dash patterns.
+- [ ] Compare hex exports with TypeScript, including shared edges and dashes across overlaps.
+- [ ] Port difference blend and adaptive contrast. Compare their output with the TypeScript reference.
 - [ ] Check template field validation against TypeScript and report unsupported options clearly when the renderer cannot honor them.
+- [ ] Add a template directory with stable, zero-padded IDs. Reserve `0000.json` for the default template and use `0001.json`, `0002.json`, and so on for additional templates. Keep the existing JSON format and read each display name from its `template` field.
+- [ ] Add a template inventory command, for example `dmsh templates list --directory templates --output templates.tsv`. Write a UTF-8 text file with one row per template, sorted by ID, with columns for ID, name, and relative JSON path. Make it runnable without a prompt so Codex or scripts can refresh the inventory.
 - [ ] Verify that batch mode continues after invalid images, filename conflicts, and archive failures, and that each failed source remains in the incoming folder.
 - [ ] Review the remaining image preprocessing differences, including the TypeScript JPEG decoder memory limit.
 - [ ] Verify self-contained CLI packages on Windows and macOS.

@@ -10,6 +10,9 @@ public static class MapPdfExporter
         using var jpeg = WorkingImage.CreateJpeg(imagePath);
         using var image = XImage.FromStream(jpeg);
         var plan = SheetPlan.Create(template, image.PixelWidth, image.PixelHeight);
+        var grid = template.Grid;
+        var hexEdges = grid.Style == "hex" && grid.LineStyle != "none" && grid.Opacity > 0
+            && grid.Color is not ("diff" or "contrast") ? HexGrid.Build(grid, plan) : null;
         using var document = new PdfDocument();
         // PDFsharp 6.2.4 emitted Flate streams without a complete zlib
         // trailer in an Acrobat-rejected export.
@@ -42,7 +45,7 @@ public static class MapPdfExporter
             var canvasClip = new XGraphicsPath();
             canvasClip.AddRectangle(0, 0, plan.CanvasWidth, plan.CanvasHeight);
             graphics.IntersectClip(canvasClip);
-            SheetArtwork.DrawOverviewGrid(graphics, template.Grid, plan, scale);
+            SheetArtwork.DrawOverviewGrid(graphics, grid, plan, scale, hexEdges);
             graphics.Restore(gridState);
 
             var outline = new XPen(OverviewPanel.Ink, 0.5 / scale);
@@ -70,7 +73,7 @@ public static class MapPdfExporter
             graphics.IntersectClip(clip);
             graphics.DrawImage(image, plan.Margin + plan.MapLeft - sheet.Left,
                 plan.Margin + plan.MapTop - sheet.Top, plan.MapWidth, plan.MapHeight);
-            SheetArtwork.DrawGrid(graphics, template.Grid, plan, sheet);
+            SheetArtwork.DrawGrid(graphics, grid, plan, sheet, hexEdges);
             graphics.Restore(state);
             if (plan.HasCoordinateBorder)
                 SheetArtwork.DrawCoordinates(graphics, text, template.Grid, plan, sheet);

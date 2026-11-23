@@ -1,6 +1,9 @@
 # Desktop Map Slicer Headless Tool Suite
 
 See [TODO.md](TODO.md) for verified compatibility and remaining porting work.
+The default PDF layout and dashed grid rendering have been visually checked.
+The roadmap also covers numbered JSON templates and an exportable template
+inventory for scripts and other users.
 
 A planned .NET 10 command-line tool that turns tabletop battle map images
 into printable PDFs.
@@ -75,7 +78,7 @@ fails, the existing PDF stays in place.
 Batch processing continues after an individual failure and returns exit code 1
 if any image failed or was skipped due to a conflict.
 
-The exporter draws the clipped map, a rectangular or isometric grid,
+The exporter draws the clipped map, a rectangular, isometric, or hex grid,
 and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
 `"coordinates": false` in the template JSON to omit the coordinate bars
 and their reserved space. The default template enables them. The optional
@@ -87,11 +90,16 @@ grid, keep `grid.style` as `"rect"` and set `grid.iso` to `true` and
 `grid.isoAngleDegrees` to a value from 15 to 90. Use `null` for the angle
 when `grid.iso` is false. The settings apply on the map sheets and overview.
 
-For rectangular and isometric grids, `grid.lineStyle` supports `solid`, `none`,
+Set `grid.style` to `"hex"` for hex grids. Hex grids support rotation,
+offsets, and isometric tilt. Grids that exceed the TypeScript limit of
+50,000 candidate cells are rejected. Coordinate bars are unavailable for hex grids.
+
+For all three grid types, `grid.lineStyle` supports `solid`, `none`,
 `dash-1`, `dash-2`, `dash-3`, `dash-4`, `dash-5`, `dash-6`, `dash-8`,
 `dash-10`, `dash-16`, and `corners`, plus the TypeScript legacy patterns
 and aliases. The cell-based patterns start at grid intersections so their
 phase continues across overlapping sheets. The overview uses the same patterns.
+Hex dash lengths are based on each edge's length.
 
 The overview is always landscape. It uses the TypeScript layout formulas
 for the map area and the left title, legend, and scaling panel. Panel font
