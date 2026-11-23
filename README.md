@@ -87,6 +87,19 @@ The second number marks the filename pattern. The renderer uses the image's
 aspect ratio for placement. In a batch, the override applies to each image
 independently. The template file stays intact.
 
+After fitting the map to the requested width and paper, the exporter
+rounds both map dimensions down to multiples of 5 feet. It tries scaling
+by width and cropping height, then scaling by height and cropping width.
+It keeps the result that retains the most of the original image, using
+the width-first result on a tie. The crop is centered, and the image
+keeps its aspect ratio. If a whole 5-foot cell cannot fit on both axes,
+the export reports an error.
+
+Unrotated rectangular grids shift by half a cell on each axis with an odd
+number of 5-foot cells. With zero template offsets, grid lines and coordinate
+bars align with the map edges on the overview and print sheets. Explicit
+`grid.offsetX` and `grid.offsetY` are applied on top of that alignment.
+
 ```powershell
 dotnet run --project src/Dmsh.Cli -- --width 120 map.png
 ```
@@ -139,7 +152,10 @@ On the overview and map sheets, the exporter draws the grid first, then
 any coordinate bars, then the page badges so they stay on top.
 
 Coordinate bar labels use the TypeScript sizing and placement formulas. The
-bar is half a grid cell tall or wide. Row and column labels use 95% of that
+bar thickness is set by the top-level `coordinateBarHeightRatio` template
+setting. It defaults to `0.4`, or 40% of a grid cell, when omitted. Use
+`0.5` for a half-cell bar. The map fit reserves room for two
+bars on each axis using that same ratio. Row and column labels use 95% of that
 thickness and 60% horizontal scaling. Distance numbers use 85% of the
 thickness and 50% horizontal scaling regardless of digit count. Both use
 Helvetica Bold, with lighter ink for distance numbers. Horizontal text uses

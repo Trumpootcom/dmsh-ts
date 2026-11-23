@@ -57,11 +57,12 @@ internal static class SheetArtwork
         // to PDFsharp's positive-down coordinates only when drawing.
         var angle = (grid.Iso ? grid.IsoAngleDegrees!.Value : 90) * Math.PI / 180;
         var turn = (grid.RotationDegrees % 360) * Math.PI / 180;
+        var alignToEdges = !grid.Iso && turn == 0;
         var length = plan.GridSpacing / Math.Sin(angle);
         var u = (X: length * Math.Cos(turn), Y: length * Math.Sin(turn));
-        var v = (X: length * Math.Cos(turn + angle), Y: length * Math.Sin(turn + angle));
-        var offsetX = grid.OffsetX % 1;
-        var offsetY = grid.OffsetY % 1;
+        var v = (X: alignToEdges ? 0 : length * Math.Cos(turn + angle), Y: length * Math.Sin(turn + angle));
+        var offsetX = grid.OffsetX % 1 + (alignToEdges ? plan.GridEdgeOffsetX : 0);
+        var offsetY = grid.OffsetY % 1 + (alignToEdges ? plan.GridEdgeOffsetY : 0);
         var originX = plan.CanvasWidth / 2 + offsetX * u.X - offsetY * v.X;
         var originY = -plan.CanvasHeight / 2 + offsetX * u.Y - offsetY * v.Y;
         var determinant = u.X * v.Y - u.Y * v.X;
@@ -133,27 +134,27 @@ internal static class SheetArtwork
         double sheetLeft, double sheetTop, XRect bounds, double originX = 0, double originY = 0, double scale = 1)
     {
         var spacing = plan.GridSpacing;
-        var bar = spacing / 2;
+        var bar = plan.CoordinateBarThickness;
         var left = bounds.Left + plan.MapLeft - sheetLeft;
         var top = bounds.Top + plan.MapTop - sheetTop;
         var right = left + plan.MapWidth;
         var bottom = top + plan.MapHeight;
 
         var column = 0;
-        for (var x = FirstLine(left + plan.MapWidth / 2 + grid.OffsetX % 1 * spacing, left, spacing);
+        for (var x = FirstLine(left + plan.MapWidth / 2 + (grid.OffsetX % 1 + plan.GridEdgeOffsetX) * spacing, left, spacing);
              x + spacing <= right + 1e-9; x += spacing, column++)
         {
-            if (!Inside(x + bar, bounds.Left, bounds.Right))
+            if (!Inside(x + spacing / 2, bounds.Left, bounds.Right))
                 continue;
             Cell(ColumnName(column), column, x, top - bar, spacing, bar);
             Cell(ColumnName(column), column, x, bottom, spacing, bar);
         }
 
         var row = 0;
-        for (var y = FirstLine(top + plan.MapHeight / 2 + grid.OffsetY % 1 * spacing, top, spacing);
+        for (var y = FirstLine(top + plan.MapHeight / 2 + (grid.OffsetY % 1 + plan.GridEdgeOffsetY) * spacing, top, spacing);
              y + spacing <= bottom + 1e-9; y += spacing, row++)
         {
-            if (!Inside(y + bar, bounds.Top, bounds.Bottom))
+            if (!Inside(y + spacing / 2, bounds.Top, bounds.Bottom))
                 continue;
             if (Inside(left, bounds.Left, bounds.Right))
                 Cell((row + 1).ToString(), row, left - bar, y, bar, spacing, vertical: true);

@@ -35,8 +35,7 @@ public static class MapPdfExporter
             var scale = overviewWidth / plan.CanvasWidth;
             var left = 2 * plan.Margin + panelWidth;
             var top = (pageHeight - plan.CanvasHeight * scale) / 2;
-            graphics.DrawImage(image, left + plan.MapLeft * scale, top + plan.MapTop * scale,
-                plan.MapWidth * scale, plan.MapHeight * scale);
+            DrawMapImage(graphics, image, plan, left + plan.MapLeft * scale, top + plan.MapTop * scale, scale);
 
             var overviewState = graphics.Save();
             graphics.TranslateTransform(left, top);
@@ -71,8 +70,8 @@ public static class MapPdfExporter
             var state = graphics.Save();
             clip.AddRectangle(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight);
             graphics.IntersectClip(clip);
-            graphics.DrawImage(image, plan.Margin + plan.MapLeft - sheet.Left,
-                plan.Margin + plan.MapTop - sheet.Top, plan.MapWidth, plan.MapHeight);
+            DrawMapImage(graphics, image, plan, plan.Margin + plan.MapLeft - sheet.Left,
+                plan.Margin + plan.MapTop - sheet.Top);
             SheetArtwork.DrawGrid(graphics, grid, plan, sheet, hexEdges);
             graphics.Restore(state);
             if (plan.HasCoordinateBorder)
@@ -84,6 +83,20 @@ public static class MapPdfExporter
         }
 
         document.Save(destination, false);
+    }
+
+    private static void DrawMapImage(XGraphics graphics, XImage image, SheetPlan plan, double left, double top,
+        double scale = 1)
+    {
+        var state = graphics.Save();
+        var clip = new XGraphicsPath();
+        clip.AddRectangle(left, top, plan.MapWidth * scale, plan.MapHeight * scale);
+        graphics.IntersectClip(clip);
+        graphics.DrawImage(image,
+            left - (plan.ImageDrawWidth - plan.MapWidth) * scale / 2,
+            top - (plan.ImageDrawHeight - plan.MapHeight) * scale / 2,
+            plan.ImageDrawWidth * scale, plan.ImageDrawHeight * scale);
+        graphics.Restore(state);
     }
 
     private static PdfPage AddPage(PdfDocument document, double width, double height)

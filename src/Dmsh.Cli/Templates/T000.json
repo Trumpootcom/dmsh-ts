@@ -4,6 +4,7 @@
   "title": "TTRPG Battle Map",
   "overview": true,
   "coordinates": true,
+  "coordinateBarHeightRatio": 0.4,
   "worldWidthFeet": 160,
   "imagePlacement": "center",
   "grid": {

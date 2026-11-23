@@ -14,9 +14,17 @@ public sealed record SheetPlan(
     double PageWidth, double PageHeight, double Margin, double Overlap,
     double PrintableWidth, double PrintableHeight, double CanvasWidth, double CanvasHeight,
     double GridSpacing, double MapLeft, double MapTop, double MapWidth, double MapHeight,
+    double ImageDrawWidth, double ImageDrawHeight,
     bool HasCoordinateBorder, bool HasOverview, IReadOnlyList<SheetWindow> Sheets)
 {
     public int PageCount => Sheets.Count + (HasOverview ? 1 : 0);
+    public double CoordinateBarThickness { get; private init; }
+
+    internal double GridEdgeOffsetX => EdgeOffset(MapWidth);
+    internal double GridEdgeOffsetY => EdgeOffset(MapHeight);
+
+    // A centered map with an odd number of cells has half-cell edges.
+    private double EdgeOffset(double size) => Math.Round(size / GridSpacing) % 2 * 0.5;
 
     // All geometry uses PDF points, with canvas coordinates measured from the top left.
     public static SheetPlan Create(MapTemplate template, int imageWidth, int imageHeight)
@@ -68,13 +76,35 @@ public sealed record SheetPlan(
             throw new ArgumentException("The isometric grid angle must be null when grid.iso is false.");
 
         var coordinates = template.Coordinates && grid.Style != "hex" && !grid.Iso && grid.RotationDegrees == 0;
-        // Each of the two opposing coordinate bars reserves half a grid cell.
-        var reserve = coordinates ? spacing : 0;
+        var barRatio = template.CoordinateBarHeightRatio;
+        if (!double.IsFinite(barRatio) || barRatio <= 0)
+            throw new ArgumentException("coordinateBarHeightRatio must be a positive, finite number.");
+        var barThickness = coordinates ? spacing * barRatio : 0;
+        var reserve = 2 * barThickness;
         var aspect = (double)imageHeight / imageWidth;
-        var mapWidth = Math.Min(requestedWidth, Math.Min(canvasWidth - reserve, (canvasHeight - reserve) / aspect));
-        if (mapWidth <= 0)
+        var fittedWidth = Math.Min(requestedWidth, Math.Min(canvasWidth - reserve, (canvasHeight - reserve) / aspect));
+        if (fittedWidth <= 0)
             throw new ArgumentException("The fitted map has no room on the printable canvas.");
-        var mapHeight = mapWidth * aspect;
+        var fittedHeight = fittedWidth * aspect;
+
+        // One grid spacing represents five feet. Anchor one axis to a
+        // whole cell, preserve the aspect ratio, then crop the other axis.
+        var widthCells = (long)Math.Floor(fittedWidth / spacing);
+        var heightCells = (long)Math.Floor(fittedHeight / spacing);
+        var heightAfterWidthFit = widthCells * imageHeight / imageWidth;
+        var widthAfterHeightFit = heightCells * imageWidth / imageHeight;
+        if (heightAfterWidthFit < 1 && widthAfterHeightFit < 1)
+            throw new ArgumentException("The fitted map is too small to retain a 5-foot cell in both dimensions.");
+
+        var widthFitRetention = heightAfterWidthFit == 0 ? 0
+            : (double)heightAfterWidthFit * imageWidth / (widthCells * imageHeight);
+        var heightFitRetention = widthAfterHeightFit == 0 ? 0
+            : (double)widthAfterHeightFit * imageHeight / (heightCells * imageWidth);
+        var useWidthFit = widthFitRetention >= heightFitRetention;
+        var mapWidth = (useWidthFit ? widthCells : widthAfterHeightFit) * spacing;
+        var mapHeight = (useWidthFit ? heightAfterWidthFit : heightCells) * spacing;
+        var imageDrawWidth = useWidthFit ? mapWidth : mapHeight / aspect;
+        var imageDrawHeight = useWidthFit ? mapWidth * aspect : mapHeight;
 
         var sheets = new List<SheetWindow>();
         for (var row = 0; row < page.Rows; row++)
@@ -83,7 +113,8 @@ public sealed record SheetPlan(
 
         return new SheetPlan(width, height, margin, overlap, printableWidth, printableHeight,
             canvasWidth, canvasHeight, spacing, (canvasWidth - mapWidth) / 2,
-            (canvasHeight - mapHeight) / 2, mapWidth, mapHeight, coordinates, template.Overview,
-            sheets.AsReadOnly());
+            (canvasHeight - mapHeight) / 2, mapWidth, mapHeight, imageDrawWidth, imageDrawHeight,
+            coordinates, template.Overview,
+            sheets.AsReadOnly()) { CoordinateBarThickness = barThickness };
     }
 }
