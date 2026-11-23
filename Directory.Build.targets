@@ -8,7 +8,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_GitCommitHashOutput" />
       <Output TaskParameter="ExitCode" PropertyName="_GitHashExitCode" />
     </Exec>
-    <Exec Command="git --no-optional-locks status --porcelain" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+    <Exec Command="git --no-optional-locks status --porcelain --untracked-files=no" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" ItemName="_GitStatusOutput" />
       <Output TaskParameter="ExitCode" PropertyName="_GitStatusExitCode" />
     </Exec>

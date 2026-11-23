@@ -20,7 +20,9 @@ dotnet run --project src/Dmsh.Cli -- --version
 ```
 
 The CLI shows the application version as `Major.Minor.Build`, the short Git
-commit hash, a `Modified` marker for uncommitted changes, and the UTC build time.
+commit hash, a `Modified` marker for staged or unstaged changes to tracked
+files, and the UTC build time. Untracked images and generated PDFs do not
+affect the marker.
 Set Major and Minor in `Directory.Build.props`. Build comes from the Git commit
 count and falls back to 0 if Git cannot resolve the revision.
 
