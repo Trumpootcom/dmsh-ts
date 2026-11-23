@@ -1,6 +1,6 @@
 # Desktop Map Slicer Headless Tool Suite
 
-See [TODO.md](TODO.md) for the remaining porting work.
+See [TODO.md](TODO.md) for verified compatibility and remaining porting work.
 
 A planned .NET 10 command-line tool that turns tabletop battle map images
 into printable PDFs.
@@ -75,12 +75,18 @@ fails, the existing PDF stays in place.
 Batch processing continues after an individual failure and returns exit code 1
 if any image failed or was skipped due to a conflict.
 
-The exporter draws the clipped map, the default solid rectangular grid,
+The exporter draws the clipped map, an unrotated rectangular grid,
 and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
 `"coordinates": false` in the template JSON to omit the coordinate bars
 and their reserved space. The default template enables them. The optional
 overview shows the rectangular grid, sheet outlines and their badges, with one set of coordinate
 bars around the full map when coordinates are enabled.
+
+For rectangular grids, `grid.lineStyle` supports `solid`, `none`,
+`dash-1`, `dash-2`, `dash-3`, `dash-4`, `dash-5`, `dash-6`, `dash-8`,
+`dash-10`, `dash-16`, and `corners`, plus the TypeScript legacy patterns
+and aliases. The cell-based patterns start at grid intersections so their
+phase continues across overlapping sheets. The overview uses the same patterns.
 
 The overview is always landscape. It uses the TypeScript layout formulas
 for the map area and the left title, legend, and scaling panel. Panel font

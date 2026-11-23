@@ -42,7 +42,7 @@ public static class MapPdfExporter
             var canvasClip = new XGraphicsPath();
             canvasClip.AddRectangle(0, 0, plan.CanvasWidth, plan.CanvasHeight);
             graphics.IntersectClip(canvasClip);
-            SheetArtwork.DrawOverviewGrid(graphics, template.Grid, plan);
+            SheetArtwork.DrawOverviewGrid(graphics, template.Grid, plan, scale);
             graphics.Restore(gridState);
 
             var outline = new XPen(OverviewPanel.Ink, 0.5 / scale);

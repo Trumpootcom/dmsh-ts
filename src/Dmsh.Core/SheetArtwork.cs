@@ -15,31 +15,44 @@ internal static class SheetArtwork
         => DrawGrid(graphics, grid, plan, sheet.Left, sheet.Top,
             new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
 
-    public static void DrawOverviewGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan)
-        => DrawGrid(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight));
+    public static void DrawOverviewGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan, double scale)
+        => DrawGrid(graphics, grid, plan, 0, 0, new XRect(0, 0, plan.CanvasWidth, plan.CanvasHeight), scale);
 
     private static void DrawGrid(XGraphics graphics, GridTemplate grid, SheetPlan plan,
-        double sheetLeft, double sheetTop, XRect bounds)
+        double sheetLeft, double sheetTop, XRect bounds, double viewScale = 1)
     {
+        var style = GridLinePattern.Normalize(grid.LineStyle);
         if (grid.Style is not ("rect" or "square") || grid.Iso || grid.RotationDegrees != 0
-            || grid.LineStyle != "solid" || grid.Opacity <= 0 || grid.Color is "diff" or "contrast")
+            || style == "none" || grid.Opacity <= 0 || grid.Color is "diff" or "contrast")
             return;
 
         var color = grid.Color switch { "white" => 255, "gray" => 128, _ => 0 };
         var pen = new XPen(XColor.FromArgb((int)Math.Round(Math.Clamp(grid.Opacity, 0, 1) * 255),
             color, color, color), grid.LineWidthPoints);
         var spacing = plan.GridSpacing;
-        var x = FirstLine(plan.CanvasWidth / 2 + grid.OffsetX % 1 * spacing, sheetLeft, spacing);
-        var y = FirstLine(plan.CanvasHeight / 2 + grid.OffsetY % 1 * spacing, sheetTop, spacing);
-        for (; x <= sheetLeft + bounds.Width; x += spacing)
+        var originX = plan.CanvasWidth / 2 + grid.OffsetX % 1 * spacing;
+        var originY = plan.CanvasHeight / 2 + grid.OffsetY % 1 * spacing;
+        var minI = Math.Floor((sheetLeft - originX) / spacing);
+        var maxI = Math.Ceiling((sheetLeft + bounds.Width - originX) / spacing);
+        // TypeScript's second lattice axis runs up the PDF page.
+        var minJ = Math.Floor((originY - sheetTop - bounds.Height) / spacing);
+        var maxJ = Math.Ceiling((originY - sheetTop) / spacing);
+        var x = bounds.Left + originX - sheetLeft;
+        var y = bounds.Top + originY - sheetTop;
+
+        var horizontal = pen.Clone();
+        GridLinePattern.Apply(horizontal, style, spacing, minI - 1, viewScale);
+        for (var j = minJ; j <= maxJ; j++)
         {
-            var pageX = bounds.Left + x - sheetLeft;
-            graphics.DrawLine(pen, pageX, bounds.Top, pageX, bounds.Bottom);
+            var lineY = y - j * spacing;
+            graphics.DrawLine(horizontal, x + (minI - 1) * spacing, lineY, x + (maxI + 1) * spacing, lineY);
         }
-        for (; y <= sheetTop + bounds.Height; y += spacing)
+        var vertical = pen.Clone();
+        GridLinePattern.Apply(vertical, style, spacing, minJ - 1, viewScale);
+        for (var i = minI; i <= maxI; i++)
         {
-            var pageY = bounds.Top + y - sheetTop;
-            graphics.DrawLine(pen, bounds.Left, pageY, bounds.Right, pageY);
+            var lineX = x + i * spacing;
+            graphics.DrawLine(vertical, lineX, y - (minJ - 1) * spacing, lineX, y - (maxJ + 1) * spacing);
         }
     }
 
