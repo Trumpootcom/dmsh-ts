@@ -4,9 +4,12 @@ namespace Dmsh.Core;
 
 internal static class SheetArtwork
 {
+    private const int DistanceMarkerInterval = 6;
+    private const double CoordinateBorderWidth = 0.5;
+    private const double LatticeTolerance = 1e-9;
     private static readonly XSolidBrush BorderLight = new(XColor.FromArgb(240, 235, 219));
     private static readonly XSolidBrush BorderDark = new(XColor.FromArgb(186, 177, 151));
-    private static readonly XPen BorderPen = new(XColor.FromArgb(89, 74, 46), 0.5);
+    private static readonly XColor BorderColor = XColor.FromArgb(89, 74, 46);
     // TypeScript coordinateBarStyle HSL colors, rounded to RGB bytes.
     private static readonly XColor CoordinateInk = XColor.FromArgb(46, 36, 20);
     private static readonly XColor DistanceInk = XColor.FromArgb(97, 79, 51);
@@ -77,8 +80,19 @@ internal static class SheetArtwork
         var maxI = corners.Max(corner => corner.I);
         var minJ = corners.Min(corner => corner.J);
         var maxJ = corners.Max(corner => corner.J);
-        DrawFamily(u, v, minI, maxI, minJ, maxJ);
-        DrawFamily(v, u, minJ, maxJ, minI, maxI);
+        // Count from the map's projected edges, so the same lines are
+        // emphasized on every sheet and the overview.
+        var mapRight = plan.MapLeft + plan.MapWidth;
+        var mapBottom = plan.MapTop + plan.MapHeight;
+        var mapCorners = new[]
+        {
+            Project(plan.MapLeft, -plan.MapTop), Project(mapRight, -plan.MapTop),
+            Project(plan.MapLeft, -mapBottom), Project(mapRight, -mapBottom)
+        };
+        var firstRow = Math.Floor(mapCorners.Max(corner => corner.J) + LatticeTolerance);
+        var firstColumn = Math.Ceiling(mapCorners.Min(corner => corner.I) - LatticeTolerance);
+        DrawFamily(u, v, minI, maxI, minJ, maxJ, firstRow, mapCorners.Min(corner => corner.J), -1);
+        DrawFamily(v, u, minJ, maxJ, minI, maxI, firstColumn, mapCorners.Max(corner => corner.I), 1);
 
         (double I, double J) Project(double x, double y)
         {
@@ -89,17 +103,24 @@ internal static class SheetArtwork
         }
 
         void DrawFamily((double X, double Y) along, (double X, double Y) across,
-            double minDistance, double maxDistance, double minIndex, double maxIndex)
+            double minDistance, double maxDistance, double minIndex, double maxIndex,
+            double firstMapIndex, double oppositeMapEdge, int direction)
         {
             var startIndex = Math.Floor(minDistance) - 1;
             var endIndex = Math.Ceiling(maxDistance) + 1;
             var stroke = pen.Clone();
             GridLinePattern.Apply(stroke, style, length, startIndex, viewScale);
+            var markerStroke = pen.Clone();
+            markerStroke.Width *= 2;
+            GridLinePattern.Apply(markerStroke, style, length, startIndex, viewScale);
             for (var index = Math.Floor(minIndex); index <= Math.Ceiling(maxIndex); index++)
             {
+                var cells = (index - firstMapIndex) * direction;
+                var isMarker = cells > 0 && cells % DistanceMarkerInterval == 0
+                    && (oppositeMapEdge - index) * direction > LatticeTolerance;
                 var x = originX + index * across.X;
                 var y = originY + index * across.Y;
-                graphics.DrawLine(stroke, ToPage(x + startIndex * along.X, y + startIndex * along.Y),
+                graphics.DrawLine(isMarker ? markerStroke : stroke, ToPage(x + startIndex * along.X, y + startIndex * along.Y),
                     ToPage(x + endIndex * along.X, y + endIndex * along.Y));
             }
         }
@@ -164,14 +185,15 @@ internal static class SheetArtwork
 
         void Cell(string label, int index, double x, double y, double width, double height, bool vertical = false) =>
             DrawCell(graphics, text, label, index, originX + x * scale, originY + y * scale,
-                width * scale, height * scale, scale, vertical);
+                width * scale, height * scale, CoordinateBorderWidth * scale, vertical);
     }
 
     private static void DrawCell(XGraphics graphics, PdfLabelText text, string label, int index,
-        double x, double y, double width, double height, double scale, bool vertical)
+        double x, double y, double width, double height, double borderWidth, bool vertical)
     {
-        var background = (index + 1) % 6 == 0 ? BorderDark : BorderLight;
-        var border = scale == 1 ? BorderPen : new XPen(BorderPen.Color, 0.5 * scale);
+        var isDistanceMarker = (index + 1) % DistanceMarkerInterval == 0;
+        var background = isDistanceMarker ? BorderDark : BorderLight;
+        var border = new XPen(BorderColor, borderWidth);
         graphics.DrawRectangle(border, background, x, y, width, height);
         var distance = ((index + 1) * 5).ToString();
         var bar = vertical ? width : height;

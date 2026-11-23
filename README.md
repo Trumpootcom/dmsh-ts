@@ -139,6 +139,11 @@ substitute their own Helvetica glyphs.
 
 On the overview and map sheets, the exporter draws the grid first, then
 any coordinate bars, then the page badges so they stay on top.
+Every sixth coordinate label (30, 60, 90 feet, and so on) has a darker
+fill. All coordinate label boxes use the same border width.
+Rectangular and isometric grids double the template's `grid.lineWidthPoints`
+on every sixth interior grid line in both directions, counting from the
+map edges. The edges and hex grid lines retain the normal stroke width.
 
 Coordinate bar labels use the TypeScript sizing and placement formulas. The
 bar thickness is set by the top-level `coordinateBarHeightRatio` template
