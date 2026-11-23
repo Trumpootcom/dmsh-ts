@@ -33,12 +33,14 @@ try
 {
     if (args is ["render", var image, "--template", var renderTemplate])
     {
+        Console.WriteLine(ApplicationVersion.Current.DisplayName);
         RenderCommands.Render(image, renderTemplate);
         return;
     }
 
     if (args is ["batch", "--incoming", var incoming, "--output", var output, "--template", var batchTemplate])
     {
+        Console.WriteLine(ApplicationVersion.Current.DisplayName);
         Environment.ExitCode = RenderCommands.Batch(incoming, output, batchTemplate);
         return;
     }

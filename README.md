@@ -1,5 +1,7 @@
 # Desktop Map Slicer Headless Tool Suite
 
+See [TODO.md](TODO.md) for the remaining porting work.
+
 A planned .NET 10 command-line tool that turns tabletop battle map images
 into printable PDFs.
 
@@ -36,6 +38,10 @@ This command does not read the image or export a PDF.
 
 ## Export PDFs
 
+Both export commands print the program version and Git revision, followed by
+a processing line for each image and an output line when its PDF is saved.
+Batch mode also reports each successful move to the processed folder.
+
 PDF export uses PDFsharp. The shared library explicitly references
 `System.Security.Cryptography.Pkcs` 8.0.2 to replace the vulnerable 8.0.1
 dependency brought in by PDFsharp 6.2.4.
@@ -47,14 +53,35 @@ dotnet run --project src/Dmsh.Cli -- batch --incoming incoming --output output -
 
 `render` writes `map.pdf` beside `map.png`. `batch` scans the top level of
 `incoming` for JPEG, PNG, BMP and WebP files and moves each source into
-`incoming/processed` after its PDF is saved in `output`. Existing PDFs,
-existing archive paths, and duplicate output names are reported as conflicts.
+`incoming/processed` after its PDF is saved in `output`. Both commands
+replace existing PDFs by default after the new PDF has been written
+successfully. Existing archive paths and duplicate output names within a
+batch are reported as conflicts.
+
+On Windows, close the existing PDF in Acrobat or another viewer before
+rerunning the command if the viewer blocks replacement. If replacement
+fails, the existing PDF stays in place.
 Batch processing continues after an individual failure and returns exit code 1
 if any image failed or was skipped due to a conflict.
 
-The initial exporter draws the clipped map on each sheet and an optional
-overview with sheet outlines. Grid artwork, sheet badges, and coordinate
-labels are pending.
+The exporter draws the clipped map, the default solid rectangular grid,
+and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
+`"coordinates": false` in the template JSON to omit the coordinate bars
+and their reserved space. The default template enables them. The optional
+overview still uses the initial sheet outlines.
+
+Coordinate bars use bold row and column labels and thinner distance numbers.
+The distance numbers use the same font size and width scaling regardless of
+how many digits they contain.
+
+Sheet badges use 18-point bold text with the TypeScript badge's baseline,
+padding, and corner placement. Badge text uses Helvetica on macOS and Arial
+on Windows.
+
+Regenerate PDFs made by older builds if Acrobat reports a page error. The
+exporter now leaves PDF page commands uncompressed and embeds images and
+labels as JPEGs to avoid the incomplete compressed streams seen in those
+exports.
 
 ### Image preprocessing
 

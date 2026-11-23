@@ -6,8 +6,7 @@ internal static class RenderCommands
     {
         var template = ReadTemplate(templatePath);
         var pdf = Path.ChangeExtension(Path.GetFullPath(image), ".pdf");
-        Save(template, image, pdf);
-        Console.WriteLine(pdf);
+        RenderImage(template, Path.GetFullPath(image), pdf);
     }
 
     public static int Batch(string incoming, string output, string templatePath)
@@ -41,10 +40,10 @@ internal static class RenderCommands
                 if (File.Exists(archivedImage) || Directory.Exists(archivedImage))
                     throw new IOException($"Processed path already exists: {archivedImage}");
 
-                Save(template, image, pdf);
+                RenderImage(template, image, pdf);
                 saved = true;
                 File.Move(image, archivedImage);
-                Console.WriteLine($"{pdf} (source moved to {archivedImage})");
+                Console.WriteLine($"Moved source: {archivedImage}");
             }
             catch (Exception error)
             {
@@ -55,6 +54,13 @@ internal static class RenderCommands
             }
         }
         return exitCode;
+    }
+
+    private static void RenderImage(MapTemplate template, string image, string pdf)
+    {
+        Console.WriteLine($"Processing image: {image}");
+        Save(template, image, pdf);
+        Console.WriteLine($"Created output: {pdf}");
     }
 
     private static bool IsImage(string path) =>
@@ -70,8 +76,8 @@ internal static class RenderCommands
     {
         if (!IsImage(image))
             throw new ArgumentException("Supported images are JPEG, PNG, BMP and static WebP.");
-        if (File.Exists(pdf) || Directory.Exists(pdf))
-            throw new IOException($"Output path already exists: {pdf}");
+        if (Directory.Exists(pdf))
+            throw new IOException($"Output path is a directory: {pdf}");
 
         var temporary = Path.Combine(Path.GetDirectoryName(pdf)!, $".dmsh-{Guid.NewGuid():N}.tmp");
         using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write))
@@ -90,7 +96,12 @@ internal static class RenderCommands
         }
         try
         {
-            File.Move(temporary, pdf);
+            File.Move(temporary, pdf, overwrite: true);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException(
+                $"Could not replace '{pdf}': {error.Message} Close the PDF if it is open in a viewer and retry.", error);
         }
         finally
         {

@@ -11,6 +11,10 @@ public static class MapPdfExporter
         using var image = XImage.FromStream(jpeg);
         var plan = SheetPlan.Create(template, image.PixelWidth, image.PixelHeight);
         using var document = new PdfDocument();
+        // PDFsharp 6.2.4 emitted Flate streams without a complete zlib
+        // trailer in an Acrobat-rejected export.
+        document.Options.CompressContentStreams = false;
+        document.Options.UseFlateDecoderForJpegImages = PdfUseFlateDecoderForJpegImages.Never;
         document.Info.Title = template.Title;
 
         if (plan.HasOverview)
@@ -30,10 +34,16 @@ public static class MapPdfExporter
         {
             using var graphics = AddPage(document, plan);
             var clip = new XGraphicsPath();
+            var state = graphics.Save();
             clip.AddRectangle(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight);
             graphics.IntersectClip(clip);
             graphics.DrawImage(image, plan.Margin + plan.MapLeft - sheet.Left,
                 plan.Margin + plan.MapTop - sheet.Top, plan.MapWidth, plan.MapHeight);
+            SheetArtwork.DrawGrid(graphics, template.Grid, plan, sheet);
+            graphics.Restore(state);
+            SheetArtwork.DrawBadge(graphics, plan, sheet);
+            if (plan.HasCoordinateBorder)
+                SheetArtwork.DrawCoordinates(graphics, template.Grid, plan, sheet);
         }
 
         document.Save(destination, false);
