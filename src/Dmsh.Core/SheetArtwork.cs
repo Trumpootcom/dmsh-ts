@@ -22,38 +22,64 @@ internal static class SheetArtwork
         double sheetLeft, double sheetTop, XRect bounds, double viewScale = 1)
     {
         var style = GridLinePattern.Normalize(grid.LineStyle);
-        if (grid.Style is not ("rect" or "square") || grid.Iso || grid.RotationDegrees != 0
+        if (grid.Style is not ("rect" or "square" or "iso")
             || style == "none" || grid.Opacity <= 0 || grid.Color is "diff" or "contrast")
             return;
 
         var color = grid.Color switch { "white" => 255, "gray" => 128, _ => 0 };
         var pen = new XPen(XColor.FromArgb((int)Math.Round(Math.Clamp(grid.Opacity, 0, 1) * 255),
             color, color, color), grid.LineWidthPoints);
-        var spacing = plan.GridSpacing;
-        var originX = plan.CanvasWidth / 2 + grid.OffsetX % 1 * spacing;
-        var originY = plan.CanvasHeight / 2 + grid.OffsetY % 1 * spacing;
-        var minI = Math.Floor((sheetLeft - originX) / spacing);
-        var maxI = Math.Ceiling((sheetLeft + bounds.Width - originX) / spacing);
-        // TypeScript's second lattice axis runs up the PDF page.
-        var minJ = Math.Floor((originY - sheetTop - bounds.Height) / spacing);
-        var maxJ = Math.Ceiling((originY - sheetTop) / spacing);
-        var x = bounds.Left + originX - sheetLeft;
-        var y = bounds.Top + originY - sheetTop;
+        // Retain the TypeScript lattice's positive-up PDF coordinates. Convert
+        // to PDFsharp's positive-down coordinates only when drawing.
+        var angle = (grid.Iso ? grid.IsoAngleDegrees!.Value : 90) * Math.PI / 180;
+        var turn = (grid.RotationDegrees % 360) * Math.PI / 180;
+        var length = plan.GridSpacing / Math.Sin(angle);
+        var u = (X: length * Math.Cos(turn), Y: length * Math.Sin(turn));
+        var v = (X: length * Math.Cos(turn + angle), Y: length * Math.Sin(turn + angle));
+        var offsetX = grid.OffsetX % 1;
+        var offsetY = grid.OffsetY % 1;
+        var originX = plan.CanvasWidth / 2 + offsetX * u.X - offsetY * v.X;
+        var originY = -plan.CanvasHeight / 2 + offsetX * u.Y - offsetY * v.Y;
+        var determinant = u.X * v.Y - u.Y * v.X;
+        var corners = new[]
+        {
+            Project(sheetLeft, -sheetTop),
+            Project(sheetLeft + bounds.Width, -sheetTop),
+            Project(sheetLeft, -sheetTop - bounds.Height),
+            Project(sheetLeft + bounds.Width, -sheetTop - bounds.Height)
+        };
+        var minI = corners.Min(corner => corner.I);
+        var maxI = corners.Max(corner => corner.I);
+        var minJ = corners.Min(corner => corner.J);
+        var maxJ = corners.Max(corner => corner.J);
+        DrawFamily(u, v, minI, maxI, minJ, maxJ);
+        DrawFamily(v, u, minJ, maxJ, minI, maxI);
 
-        var horizontal = pen.Clone();
-        GridLinePattern.Apply(horizontal, style, spacing, minI - 1, viewScale);
-        for (var j = minJ; j <= maxJ; j++)
+        (double I, double J) Project(double x, double y)
         {
-            var lineY = y - j * spacing;
-            graphics.DrawLine(horizontal, x + (minI - 1) * spacing, lineY, x + (maxI + 1) * spacing, lineY);
+            var dx = x - originX;
+            var dy = y - originY;
+            return ((dx * v.Y - dy * v.X) / determinant,
+                (u.X * dy - u.Y * dx) / determinant);
         }
-        var vertical = pen.Clone();
-        GridLinePattern.Apply(vertical, style, spacing, minJ - 1, viewScale);
-        for (var i = minI; i <= maxI; i++)
+
+        void DrawFamily((double X, double Y) along, (double X, double Y) across,
+            double minDistance, double maxDistance, double minIndex, double maxIndex)
         {
-            var lineX = x + i * spacing;
-            graphics.DrawLine(vertical, lineX, y - (minJ - 1) * spacing, lineX, y - (maxJ + 1) * spacing);
+            var startIndex = Math.Floor(minDistance) - 1;
+            var endIndex = Math.Ceiling(maxDistance) + 1;
+            var stroke = pen.Clone();
+            GridLinePattern.Apply(stroke, style, length, startIndex, viewScale);
+            for (var index = Math.Floor(minIndex); index <= Math.Ceiling(maxIndex); index++)
+            {
+                var x = originX + index * across.X;
+                var y = originY + index * across.Y;
+                graphics.DrawLine(stroke, ToPage(x + startIndex * along.X, y + startIndex * along.Y),
+                    ToPage(x + endIndex * along.X, y + endIndex * along.Y));
+            }
         }
+
+        XPoint ToPage(double x, double y) => new(bounds.Left + x - sheetLeft, bounds.Top - y - sheetTop);
     }
 
     public static void DrawBadge(XGraphics graphics, PdfLabelText text, SheetWindow sheet, XRect bounds, double scale = 1)

@@ -60,6 +60,13 @@ public sealed record SheetPlan(
             || requestedWidth <= 0 || imageWidth <= 0 || imageHeight <= 0)
             throw new ArgumentException("Grid spacing, map scale or image dimensions are invalid.");
 
+        if (!double.IsFinite(grid.RotationDegrees) || !double.IsFinite(grid.OffsetX) || !double.IsFinite(grid.OffsetY))
+            throw new ArgumentException("Grid rotation and offsets must be finite numbers.");
+        if (grid.Iso && (grid.IsoAngleDegrees is not double angle || !double.IsFinite(angle) || angle < 15 || angle > 90))
+            throw new ArgumentException("Isometric grid angle must be between 15 and 90 degrees.");
+        if (!grid.Iso && grid.IsoAngleDegrees is not null)
+            throw new ArgumentException("The isometric grid angle must be null when grid.iso is false.");
+
         var coordinates = template.Coordinates && grid.Style != "hex" && !grid.Iso && grid.RotationDegrees == 0;
         // Each of the two opposing coordinate bars reserves half a grid cell.
         var reserve = coordinates ? spacing : 0;

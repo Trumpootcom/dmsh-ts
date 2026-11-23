@@ -75,14 +75,19 @@ fails, the existing PDF stays in place.
 Batch processing continues after an individual failure and returns exit code 1
 if any image failed or was skipped due to a conflict.
 
-The exporter draws the clipped map, an unrotated rectangular grid,
+The exporter draws the clipped map, a rectangular or isometric grid,
 and sheet badges such as A1 and B1. On unrotated rectangular sheets, set
 `"coordinates": false` in the template JSON to omit the coordinate bars
 and their reserved space. The default template enables them. The optional
 overview shows the rectangular grid, sheet outlines and their badges, with one set of coordinate
 bars around the full map when coordinates are enabled.
 
-For rectangular grids, `grid.lineStyle` supports `solid`, `none`,
+Set `grid.rotationDegrees` to rotate either grid style. For an isometric
+grid, keep `grid.style` as `"rect"` and set `grid.iso` to `true` and
+`grid.isoAngleDegrees` to a value from 15 to 90. Use `null` for the angle
+when `grid.iso` is false. The settings apply on the map sheets and overview.
+
+For rectangular and isometric grids, `grid.lineStyle` supports `solid`, `none`,
 `dash-1`, `dash-2`, `dash-3`, `dash-4`, `dash-5`, `dash-6`, `dash-8`,
 `dash-10`, `dash-16`, and `corners`, plus the TypeScript legacy patterns
 and aliases. The cell-based patterns start at grid intersections so their
