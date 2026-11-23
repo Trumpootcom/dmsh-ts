@@ -39,9 +39,26 @@ count and falls back to 0 if Git cannot resolve the revision.
 
 ## Export PDFs
 
+Run `Dmsh.Cli --templates` to list the templates in the executable's
+`Templates` folder. The bundled `T000.json` appears even when that folder
+is missing. Add JSON files to that folder to make them available by
+filename with `--template`. To save the list from the repository root:
+
+```powershell
+dotnet run --project src/Dmsh.Cli -- --templates > templates.txt
+```
+
+Each entry uses an eight-character label column for `File:`, `Paper:`,
+`Grid:`, and `World:`. The first line shows the filename and the template
+name from the JSON. Usable
+space subtracts both margins on each sheet, overlap at each join, and two
+coordinate bars per axis when the template draws them, then rounds each
+dimension down to a multiple of 5 feet. The displayed size is the available
+space before any image fitting or cropping.
+
 Both export commands print the program version and Git revision, then
-`Using Template: T000.json (Default)` for the built-in template, or the
-selected filename and its name from the JSON, followed by one
+`Using Template:` with the selected filename and its name from the JSON's
+`template` field, followed by one
 status line per image. Paths are relative to the project root, or to the
 working directory when run outside the project.
 
@@ -63,7 +80,9 @@ dotnet run --project src/Dmsh.Cli -- map.png
 dotnet run --project src/Dmsh.Cli -- batch --incoming incoming --output output
 ```
 
-Use `--template <file.json>` to replace the bundled default. For a single
+Use `--template <name-or-path>` to replace the bundled default.
+The `.json` extension is optional, so `--template T002` selects
+`T002.json`. For a single
 image, put the option before the image filename. The source for the built-in
 template is [T000.json](src/Dmsh.Cli/Templates/T000.json).
 
@@ -139,6 +158,8 @@ substitute their own Helvetica glyphs.
 
 On the overview and map sheets, the exporter draws the grid first, then
 any coordinate bars, then the page badges so they stay on top.
+On individual sheets, coordinate labels for partial grid cells retain their
+original placement. Their boxes and text are clipped at the printable margins.
 Every sixth coordinate label (30, 60, 90 feet, and so on) has a darker
 fill. All coordinate label boxes use the same border width.
 Rectangular and isometric grids double the template's `grid.lineWidthPoints`

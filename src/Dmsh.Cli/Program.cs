@@ -27,6 +27,12 @@ if (args is ["help", _] or [_, "--help"] or [_, "-h"])
 
 try
 {
+    if (args is ["--templates"])
+    {
+        Environment.ExitCode = TemplateFiles.List();
+        return;
+    }
+
     var batch = args[0] == "batch";
     var options = ReadExportOptions(args, batch);
     double? worldWidth = null;

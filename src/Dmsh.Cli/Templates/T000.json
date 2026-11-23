@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "template": "Default",
+  "template": "Normal Ledger - Default",
   "title": "TTRPG Battle Map",
   "overview": true,
   "coordinates": true,

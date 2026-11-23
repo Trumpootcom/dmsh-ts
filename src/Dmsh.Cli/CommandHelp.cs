@@ -1,7 +1,7 @@
 internal static class CommandHelp
 {
-    private const string Render = "[--template <template.json>] [--width <feet>] <image>";
-    private const string Batch = "batch --incoming <directory> --output <directory> [--template <template.json>] [--width <feet>]";
+    private const string Render = "[--template <name-or-path>] [--width <feet>] <image>";
+    private const string Batch = "batch --incoming <directory> --output <directory> [--template <name-or-path>] [--width <feet>]";
 
     public static void WriteOverview(TextWriter output)
     {
@@ -20,9 +20,11 @@ internal static class CommandHelp
 
               --help, -h      Show this help.
               --version, -v   Show the version, Git revision and UTC build time.
+              --templates     List available templates with paper and grid settings.
 
             Run Dmsh.Cli help <command> or Dmsh.Cli <command> --help for examples.
             Exports use the built-in T000.json unless you supply --template.
+            The .json extension is optional. For example, --template T002.
             Custom templates use schema version 1.
             Use --width <feet> to override the template's worldWidthFeet.
             A filename ending in WxH or WXH supplies its own width in feet.
@@ -43,6 +45,7 @@ internal static class CommandHelp
                 failures and continues. Returns exit code 1 if any image failed.
 
                 Uses the built-in T000.json unless you supply --template.
+                The .json extension is optional.
                 Use --width <feet> to override worldWidthFeet. A trailing WxH
                 or WXH in a filename takes precedence for that image.
                 Example: Dmsh.Cli batch --incoming incoming --output output

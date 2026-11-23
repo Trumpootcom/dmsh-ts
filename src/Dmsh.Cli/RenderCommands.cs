@@ -100,12 +100,7 @@ internal static class RenderCommands
 
     private static MapTemplate ReadTemplate(string? path, double? worldWidth)
     {
-        using var json = path is null
-            ? typeof(RenderCommands).Assembly.GetManifestResourceStream("T000.json")
-                ?? throw new InvalidOperationException("The built-in template T000.json is missing.")
-            : File.OpenRead(path);
-        var template = MapTemplate.Read(json);
-        var fileName = path is null ? "T000.json" : Path.GetFileName(path);
+        var (template, fileName) = TemplateFiles.Read(path);
         Console.WriteLine($"Using Template: {fileName} ({template.Template})");
         return worldWidth is { } feet ? template with { WorldWidthFeet = feet } : template;
     }

@@ -144,8 +144,15 @@ internal static class SheetArtwork
     }
 
     public static void DrawCoordinates(XGraphics graphics, PdfLabelText text, GridTemplate grid, SheetPlan plan, SheetWindow sheet)
-        => DrawCoordinates(graphics, text, grid, plan, sheet.Left, sheet.Top,
-            new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight));
+    {
+        var bounds = new XRect(plan.Margin, plan.Margin, plan.PrintableWidth, plan.PrintableHeight);
+        var state = graphics.Save();
+        var clip = new XGraphicsPath();
+        clip.AddRectangle(bounds);
+        graphics.IntersectClip(clip);
+        DrawCoordinates(graphics, text, grid, plan, sheet.Left, sheet.Top, bounds);
+        graphics.Restore(state);
+    }
 
     public static void DrawOverviewCoordinates(XGraphics graphics, PdfLabelText text, GridTemplate grid, SheetPlan plan,
         double left, double top, double scale)
@@ -165,8 +172,6 @@ internal static class SheetArtwork
         for (var x = FirstLine(left + plan.MapWidth / 2 + (grid.OffsetX % 1 + plan.GridEdgeOffsetX) * spacing, left, spacing);
              x + spacing <= right + 1e-9; x += spacing, column++)
         {
-            if (!Inside(x + spacing / 2, bounds.Left, bounds.Right))
-                continue;
             Cell(ColumnName(column), column, x, top - bar, spacing, bar);
             Cell(ColumnName(column), column, x, bottom, spacing, bar);
         }
@@ -175,17 +180,20 @@ internal static class SheetArtwork
         for (var y = FirstLine(top + plan.MapHeight / 2 + (grid.OffsetY % 1 + plan.GridEdgeOffsetY) * spacing, top, spacing);
              y + spacing <= bottom + 1e-9; y += spacing, row++)
         {
-            if (!Inside(y + spacing / 2, bounds.Top, bounds.Bottom))
-                continue;
-            if (Inside(left, bounds.Left, bounds.Right))
-                Cell((row + 1).ToString(), row, left - bar, y, bar, spacing, vertical: true);
-            if (Inside(right, bounds.Left, bounds.Right))
-                Cell((row + 1).ToString(), row, right, y, bar, spacing, vertical: true);
+            Cell((row + 1).ToString(), row, left - bar, y, bar, spacing, vertical: true);
+            Cell((row + 1).ToString(), row, right, y, bar, spacing, vertical: true);
         }
 
-        void Cell(string label, int index, double x, double y, double width, double height, bool vertical = false) =>
+        void Cell(string label, int index, double x, double y, double width, double height, bool vertical = false)
+        {
+            // Keep the original cell placement so both halves line up on
+            // overlapping sheets. The page clip trims the visible portion.
+            if (x >= bounds.Right || x + width <= bounds.Left ||
+                y >= bounds.Bottom || y + height <= bounds.Top)
+                return;
             DrawCell(graphics, text, label, index, originX + x * scale, originY + y * scale,
                 width * scale, height * scale, CoordinateBorderWidth * scale, vertical);
+        }
     }
 
     private static void DrawCell(XGraphics graphics, PdfLabelText text, string label, int index,
@@ -225,8 +233,6 @@ internal static class SheetArtwork
         double Baseline(double size) =>
             y + bar - ((bar - PdfLabelText.Height(size, bold: true)) / 2 + bar * 0.07);
     }
-
-    private static bool Inside(double value, double min, double max) => value >= min && value <= max;
 
     private static double FirstLine(double origin, double start, double spacing) =>
         origin + Math.Ceiling((start - origin) / spacing - 1e-9) * spacing;

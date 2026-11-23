@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Dmsh.Core\Dmsh.Core.csproj" />
     <EmbeddedResource Include="Templates/T000.json" LogicalName="T000.json" />
+    <None Update="Templates/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
