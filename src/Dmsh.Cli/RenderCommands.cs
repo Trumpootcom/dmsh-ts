@@ -2,11 +2,11 @@ using Dmsh.Core;
 
 internal static class RenderCommands
 {
-    public static void Render(string image, string templatePath)
+    public static int Render(string image, string templatePath)
     {
         var template = ReadTemplate(templatePath);
         var pdf = Path.ChangeExtension(Path.GetFullPath(image), ".pdf");
-        RenderImage(template, Path.GetFullPath(image), pdf);
+        return RenderImage(template, Path.GetFullPath(image), pdf, FindProjectRoot()) ? 0 : 1;
     }
 
     public static int Batch(string incoming, string output, string templatePath)
@@ -15,6 +15,7 @@ internal static class RenderCommands
         incoming = Path.GetFullPath(incoming);
         output = Path.GetFullPath(output);
         var processed = Path.Combine(incoming, "processed");
+        var projectRoot = FindProjectRoot();
         var groups = Directory.GetFiles(incoming).Where(IsImage)
             .GroupBy(path => Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
@@ -26,7 +27,8 @@ internal static class RenderCommands
         {
             if (group.Count() > 1)
             {
-                Console.Error.WriteLine($"Multiple images would produce {group.Key}.pdf. Skipped: {string.Join(", ", group)}");
+                foreach (var imagePath in group)
+                    Console.Error.WriteLine($"Processing image: {DisplayPath(projectRoot, imagePath)} !Multiple images would produce {group.Key}.pdf");
                 exitCode = 1;
                 continue;
             }
@@ -34,33 +36,50 @@ internal static class RenderCommands
             var image = group.Single();
             var pdf = Path.Combine(output, Path.ChangeExtension(Path.GetFileName(image), ".pdf"));
             var archivedImage = Path.Combine(processed, Path.GetFileName(image));
-            var saved = false;
-            try
-            {
-                if (File.Exists(archivedImage) || Directory.Exists(archivedImage))
-                    throw new IOException($"Processed path already exists: {archivedImage}");
-
-                RenderImage(template, image, pdf);
-                saved = true;
-                File.Move(image, archivedImage);
-                Console.WriteLine($"Moved source: {archivedImage}");
-            }
-            catch (Exception error)
-            {
-                Console.Error.WriteLine($"{image}: {error.Message}");
-                if (saved)
-                    Console.Error.WriteLine($"PDF saved to {pdf}. The source could not be archived.");
+            if (!RenderImage(template, image, pdf, projectRoot, archivedImage))
                 exitCode = 1;
-            }
         }
         return exitCode;
     }
 
-    private static void RenderImage(MapTemplate template, string image, string pdf)
+    private static bool RenderImage(MapTemplate template, string image, string pdf,
+        string projectRoot, string? archivedImage = null)
     {
-        Console.WriteLine($"Processing image: {image}");
-        Save(template, image, pdf);
-        Console.WriteLine($"Created output: {pdf}");
+        var status = $"Processing image: {DisplayPath(projectRoot, image)}";
+        try
+        {
+            if (archivedImage is not null && (File.Exists(archivedImage) || Directory.Exists(archivedImage)))
+                throw new IOException($"Processed path already exists: {DisplayPath(projectRoot, archivedImage)}");
+
+            Save(template, image, pdf);
+            status += $" -> {DisplayPath(projectRoot, pdf)}";
+            if (archivedImage is not null)
+                File.Move(image, archivedImage);
+
+            Console.WriteLine(status);
+            return true;
+        }
+        catch (Exception error)
+        {
+            var message = error is InvalidDataException ? "Bad image file. " + error.Message : error.Message;
+            Console.Error.WriteLine($"{status} !{message.ReplaceLineEndings(" ")}");
+            return false;
+        }
+    }
+
+    private static string FindProjectRoot()
+    {
+        var current = Directory.GetCurrentDirectory();
+        for (DirectoryInfo? directory = new(current); directory is not null; directory = directory.Parent)
+            if (File.Exists(Path.Combine(directory.FullName, "src", "Dmsh.Cli", "Dmsh.Cli.csproj")))
+                return directory.FullName;
+        return current;
+    }
+
+    private static string DisplayPath(string root, string path)
+    {
+        var relative = Path.GetRelativePath(root, path);
+        return Path.GetFileName(relative) == relative ? $".{Path.DirectorySeparatorChar}{relative}" : relative;
     }
 
     private static bool IsImage(string path) =>

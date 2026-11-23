@@ -34,7 +34,7 @@ try
     if (args is ["render", var image, "--template", var renderTemplate])
     {
         Console.WriteLine(ApplicationVersion.Current.DisplayName);
-        RenderCommands.Render(image, renderTemplate);
+        Environment.ExitCode = RenderCommands.Render(image, renderTemplate);
         return;
     }
 

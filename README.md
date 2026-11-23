@@ -38,9 +38,18 @@ This command does not read the image or export a PDF.
 
 ## Export PDFs
 
-Both export commands print the program version and Git revision, followed by
-a processing line for each image and an output line when its PDF is saved.
-Batch mode also reports each successful move to the processed folder.
+Both export commands print the program version and Git revision, then one
+status line per image. Paths are relative to the project root, or to the
+working directory when run outside the project.
+
+```text
+Processing image: .\map.png -> .\map.pdf
+Processing image: incoming\map.png -> output\map.pdf
+Processing image: .\bad.png !Bad image file.
+```
+
+The arrow means the PDF was saved. If a batch archive move fails after
+saving, the same line shows the output path followed by the error.
 
 PDF export uses PDFsharp. The shared library explicitly references
 `System.Security.Cryptography.Pkcs` 8.0.2 to replace the vulnerable 8.0.1
