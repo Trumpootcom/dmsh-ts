@@ -13,8 +13,10 @@
 - [ ] Compare hex exports with TypeScript, including shared edges and dashes across overlaps.
 - [ ] Port difference blend and adaptive contrast. Compare their output with the TypeScript reference.
 - [ ] Check template field validation against TypeScript and report unsupported options clearly when the renderer cannot honor them.
-- [ ] Add a template directory with stable, zero-padded IDs. Reserve `0000.json` for the default template and use `0001.json`, `0002.json`, and so on for additional templates. Keep the existing JSON format and read each display name from its `template` field.
+- [ ] Extend the numbered template directory beyond the bundled default `T000.json`. Use `T001.json`, `T002.json`, and so on. Keep the existing JSON format and read each display name from its `template` field.
 - [ ] Add a template inventory command, for example `dmsh templates list --directory templates --output templates.tsv`. Write a UTF-8 text file with one row per template, sorted by ID, with columns for ID, name, and relative JSON path. Make it runnable without a prompt so Codex or scripts can refresh the inventory.
 - [ ] Verify that batch mode continues after invalid images, filename conflicts, and archive failures, and that each failed source remains in the incoming folder.
 - [ ] Review the remaining image preprocessing differences, including the TypeScript JPEG decoder memory limit.
+- [x] Add built-in general and per-command help so someone with only the executable can discover its usage.
+- [x] Bundle `T000.json` with the CLI and document how it is used when `--template` is omitted.
 - [ ] Verify self-contained CLI packages on Windows and macOS.

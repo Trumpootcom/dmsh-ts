@@ -1,17 +1,21 @@
 using Dmsh.Core;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 internal static class RenderCommands
 {
-    public static int Render(string image, string templatePath)
+    private static readonly Regex FilenameDimensions = new(@"(?<width>[0-9]+)[xX][0-9]+\z");
+
+    public static int Render(string image, string? templatePath, double? worldWidth)
     {
-        var template = ReadTemplate(templatePath);
+        var template = ReadTemplate(templatePath, worldWidth);
         var pdf = Path.ChangeExtension(Path.GetFullPath(image), ".pdf");
         return RenderImage(template, Path.GetFullPath(image), pdf, FindProjectRoot()) ? 0 : 1;
     }
 
-    public static int Batch(string incoming, string output, string templatePath)
+    public static int Batch(string incoming, string output, string? templatePath, double? worldWidth)
     {
-        var template = ReadTemplate(templatePath);
+        var template = ReadTemplate(templatePath, worldWidth);
         incoming = Path.GetFullPath(incoming);
         output = Path.GetFullPath(output);
         var processed = Path.Combine(incoming, "processed");
@@ -51,6 +55,15 @@ internal static class RenderCommands
             if (archivedImage is not null && (File.Exists(archivedImage) || Directory.Exists(archivedImage)))
                 throw new IOException($"Processed path already exists: {DisplayPath(projectRoot, archivedImage)}");
 
+            var dimensions = FilenameDimensions.Match(Path.GetFileNameWithoutExtension(image));
+            if (dimensions.Success)
+            {
+                if (!double.TryParse(dimensions.Groups["width"].Value, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out var feet) || !double.IsFinite(feet) || feet <= 0)
+                    throw new ArgumentException("The width in the image filename must be a positive, finite number in feet.");
+                template = template with { WorldWidthFeet = feet };
+            }
+
             Save(template, image, pdf);
             status += $" -> {DisplayPath(projectRoot, pdf)}";
             if (archivedImage is not null)
@@ -85,10 +98,16 @@ internal static class RenderCommands
     private static bool IsImage(string path) =>
         Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".webp";
 
-    private static MapTemplate ReadTemplate(string path)
+    private static MapTemplate ReadTemplate(string? path, double? worldWidth)
     {
-        using var json = File.OpenRead(path);
-        return MapTemplate.Read(json);
+        using var json = path is null
+            ? typeof(RenderCommands).Assembly.GetManifestResourceStream("T000.json")
+                ?? throw new InvalidOperationException("The built-in template T000.json is missing.")
+            : File.OpenRead(path);
+        var template = MapTemplate.Read(json);
+        var fileName = path is null ? "T000.json" : Path.GetFileName(path);
+        Console.WriteLine($"Using Template: {fileName} ({template.Template})");
+        return worldWidth is { } feet ? template with { WorldWidthFeet = feet } : template;
     }
 
     private static void Save(MapTemplate template, string image, string pdf)

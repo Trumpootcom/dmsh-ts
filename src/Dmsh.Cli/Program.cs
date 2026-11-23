@@ -1,10 +1,28 @@
 using Dmsh.Core;
+using System.Globalization;
 using System.Text.Json;
 
 if (args is ["--version"] or ["-v"])
 {
     Console.WriteLine(ApplicationVersion.Current.DisplayName);
     Console.WriteLine($"Built: {ApplicationVersion.Current.BuildTimestampUtc?.ToString("u") ?? "unknown"}");
+    return;
+}
+
+if (args.Length == 0 || args is ["--help"] or ["-h"] or ["help"])
+{
+    CommandHelp.WriteOverview(Console.Out);
+    return;
+}
+
+if (args is ["help", _] or [_, "--help"] or [_, "-h"])
+{
+    var command = args[0] == "help" ? args[1] : args[0];
+    if (!CommandHelp.TryWriteCommand(command, Console.Out))
+    {
+        Console.Error.WriteLine($"Unknown command '{command}'. Run with --help to list commands.");
+        Environment.ExitCode = 2;
+    }
     return;
 }
 
@@ -31,17 +49,24 @@ if (args is ["plan", var path, var width, var height]
 
 try
 {
-    if (args is ["render", var image, "--template", var renderTemplate])
+    if (args[0] != "plan")
     {
-        Console.WriteLine(ApplicationVersion.Current.DisplayName);
-        Environment.ExitCode = RenderCommands.Render(image, renderTemplate);
-        return;
-    }
+        var batch = args[0] == "batch";
+        var options = ReadExportOptions(args, batch);
+        double? worldWidth = null;
+        if (options.TryGetValue("--width", out var widthValue))
+        {
+            if (!double.TryParse(widthValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var feet)
+                || !double.IsFinite(feet) || feet <= 0)
+                throw new ArgumentException("--width must be a positive, finite number in feet.");
+            worldWidth = feet;
+        }
 
-    if (args is ["batch", "--incoming", var incoming, "--output", var output, "--template", var batchTemplate])
-    {
+        var templatePath = options.GetValueOrDefault("--template");
         Console.WriteLine(ApplicationVersion.Current.DisplayName);
-        Environment.ExitCode = RenderCommands.Batch(incoming, output, batchTemplate);
+        Environment.ExitCode = batch
+            ? RenderCommands.Batch(options["--incoming"], options["--output"], templatePath, worldWidth)
+            : RenderCommands.Render(args[^1], templatePath, worldWidth);
         return;
     }
 }
@@ -52,9 +77,28 @@ catch (Exception error)
     return;
 }
 
-Console.WriteLine("Desktop Map Slicer CLI");
-Console.WriteLine("  plan <template.json> <image-width-px> <image-height-px>");
-Console.WriteLine("  render <image> --template <template.json>");
-Console.WriteLine("  batch --incoming <directory> --output <directory> --template <template.json>");
-Console.WriteLine("  --version");
-Environment.ExitCode = args.Length == 0 ? 0 : 2;
+Console.Error.WriteLine("Invalid command or arguments. Run with --help to list commands.");
+Environment.ExitCode = 2;
+
+static Dictionary<string, string> ReadExportOptions(string[] arguments, bool batch)
+{
+    if (!batch && arguments[^1].StartsWith('-'))
+        throw new ArgumentException("Pass the image filename last. Run with --help for usage.");
+
+    var end = batch ? arguments.Length : arguments.Length - 1;
+    var options = new Dictionary<string, string>(StringComparer.Ordinal);
+    for (var i = batch ? 1 : 0; i < end; i += 2)
+    {
+        var option = arguments[i];
+        if (option is not ("--template" or "--width") && !(batch && option is ("--incoming" or "--output")))
+            throw new ArgumentException($"Unknown option '{option}'. Run with --help for usage.");
+        if (i + 1 >= end || string.IsNullOrWhiteSpace(arguments[i + 1]) || arguments[i + 1].StartsWith("--", StringComparison.Ordinal))
+            throw new ArgumentException($"Missing value for {option}.");
+        if (!options.TryAdd(option, arguments[i + 1]))
+            throw new ArgumentException($"Specify {option} only once.");
+    }
+
+    if (batch && (!options.ContainsKey("--incoming") || !options.ContainsKey("--output")))
+        throw new ArgumentException("Batch requires --incoming and --output. Run batch --help for usage.");
+    return options;
+}

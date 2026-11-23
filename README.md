@@ -8,13 +8,21 @@ inventory for scripts and other users.
 A planned .NET 10 command-line tool that turns tabletop battle map images
 into printable PDFs.
 
-The first release will accept a local map image and the `default.json`
-template from `wmsh_ts/src/default.json`. It will export a PDF with an
+The CLI accepts a local map image and uses its built-in `T000.json` template
+by default. This template comes from `wmsh_ts/src/default.json` and exports a PDF with an
 overview page followed by four landscape Ledger sheets in a 2×2 layout.
 
 The goal is to offer self-contained Windows and macOS downloads through
 GitHub Releases. A future Avalonia app will use the same C# rendering
 library as the CLI.
+
+## Get help
+
+For built-in usage help, run `Dmsh.Cli.exe --help` on Windows or
+`./Dmsh.Cli --help` on macOS. From this repository, use
+`dotnet run --project src/Dmsh.Cli -- --help`. Run a command with
+`--help`, for example `Dmsh.Cli.exe batch --help`, to see its
+arguments, behavior, and an example.
 
 ## Show the build version
 
@@ -43,7 +51,9 @@ This command does not read the image or export a PDF.
 
 ## Export PDFs
 
-Both export commands print the program version and Git revision, then one
+Both export commands print the program version and Git revision, then
+`Using Template: T000.json (Default)` for the built-in template, or the
+selected filename and its name from the JSON, followed by one
 status line per image. Paths are relative to the project root, or to the
 working directory when run outside the project.
 
@@ -61,11 +71,28 @@ PDF export uses PDFsharp. The shared library explicitly references
 dependency brought in by PDFsharp 6.2.4.
 
 ```powershell
-dotnet run --project src/Dmsh.Cli -- render map.png --template ../wmsh_ts/src/default.json
-dotnet run --project src/Dmsh.Cli -- batch --incoming incoming --output output --template ../wmsh_ts/src/default.json
+dotnet run --project src/Dmsh.Cli -- map.png
+dotnet run --project src/Dmsh.Cli -- batch --incoming incoming --output output
 ```
 
-`render` writes `map.pdf` beside `map.png`. `batch` scans the top level of
+Use `--template <file.json>` to replace the bundled default. For a single
+image, put the option before the image filename. The source for the built-in
+template is [T000.json](src/Dmsh.Cli/Templates/T000.json).
+
+Pass `--width <feet>` to override the template's `worldWidthFeet` for
+one run. If an image filename ends in `WxH` or `WXH` before the extension,
+the first number takes precedence over both `--width` and the template.
+For example, `ASHEN-E1-MAP02D_DM 150x110.png` uses a world width of 150 feet.
+The second number marks the filename pattern. The renderer uses the image's
+aspect ratio for placement. In a batch, the override applies to each image
+independently. The template file stays intact.
+
+```powershell
+dotnet run --project src/Dmsh.Cli -- --width 120 map.png
+```
+
+Passing one image as the final argument writes `map.pdf` beside `map.png`.
+`batch` scans the top level of
 `incoming` for JPEG, PNG, BMP and WebP files and moves each source into
 `incoming/processed` after its PDF is saved in `output`. Both commands
 replace existing PDFs by default after the new PDF has been written
